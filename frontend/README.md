@@ -1,39 +1,96 @@
-# Frontend — NOT_STARTED
+# Frontend — analyst dashboard
 
-Этап 2: React + Vite + TypeScript, интерфейс аналитика маркетинга.
-Сейчас здесь только инструкции; `package.json`, UI, build и test ещё нет.
-Начать с `.codex/prompts/02-frontend.md` после человеческого pull bootstrap.
+Статус: реализован в mock-first режиме, готов к подключению Backend по
+замороженному OpenAPI v1. Приложение работает без HTTP-сервера и явно помечает
+fixtures как демонстрационные данные, а не результат стратегии.
 
-Источник истины — `contracts/openapi.yaml` и `contracts/README.md`.
-Mock source — `contracts/examples/*.json`; не копировать стратегию из Python.
+## Проверенное окружение и запуск
 
-Будущие переменные (пока не читаются приложением):
+- Node.js `22.14.0`.
+- npm `10.9.2`.
+- Windows; lockfile создан npm lockfile v3.
+
+```sh
+cd frontend
+npm ci
+npm run dev
+```
+
+Откройте `http://localhost:5173`. Production-проверка:
+
+```sh
+npm test
+npm run build
+npm run preview
+```
+
+Фактический результат этапа: 5 test files / 18 tests PASS, TypeScript + Vite
+build PASS. `dist/` и `node_modules/` не входят в Git.
+
+## Конфигурация
+
+Скопируйте `.env.example` в `.env.local` при необходимости:
 
 ```dotenv
 VITE_USE_MOCKS=true
 VITE_API_BASE_URL=http://localhost:8000
 ```
 
-Base URL — origin без `/api/v1`; пути клиента уже имеют этот prefix.
-Сделать единый типизированный client interface и два транспорта: fixture и
-HTTP. Mock-mode должен воспроизводить queued → running → completed и failed,
-HTTP ошибки и timeout. Fixtures явно помечать в UI. Не выдавать их за runtime.
+- `VITE_USE_MOCKS=true` выбирает `MockTransport` и JSON из
+  `../contracts/examples/`. Это значение используется и по умолчанию, если
+  переменная не задана.
+- `VITE_USE_MOCKS=false` выбирает `HttpTransport` без изменений компонентов.
+- `VITE_API_BASE_URL` — origin без `/api/v1`; клиент сам добавляет prefix.
 
-Пользовательский сценарий: обзор аудитории/лимитов/каналов → seed и запуск
-mock-агента → состояние процесса → KPI, пилоты, финальный план, предупреждения
-и ограничения. Показать source, свободный бюджет/охват после всего прогона,
-нулевую стоимость и nullable ROI/risk. Поддержать пустые/loading/error состояния,
-понятные подписи, доступность и адаптивную компоновку.
+Mock selector покрывает обычный и мгновенный completed, zero-cost/nullable ROI,
+negative completed, stored failed, HTTP error и timeout. Для наглядности timeout
+fixture сокращён до 5 секунд; обычный client и HTTP mode используют 5 минут.
 
-API n_campaigns означает финал; campaigns_detail включает пилоты. Не суммировать
-gross строк, не трактовать negative net как failed. UNKNOWN в summary означает
-отсутствующий сегмент данных и не является фильтром кампании.
+## Структура
 
-Mock и HTTP обязаны использовать одинаковые типы и методы; переключение
-`VITE_USE_MOCKS=false` не требует переписывания UI. Никаких Python imports,
-API-ключей или дублирования расчёта score.
+```text
+src/api/types.ts             DTO, соответствующие OpenAPI v1
+src/api/client.ts            POST → обязательный GET и polling
+src/api/errors.ts            структурированные HTTP/timeout ошибки
+src/api/httpTransport.ts     fetch transport для /api/v1
+src/api/mockTransport.ts     клонированные contract fixtures и demo-сценарии
+src/config.ts                единственная точка выбора транспорта/env
+src/components/              обзор кейса, запуск, status и результаты
+src/App.tsx                  orchestration, AbortController и UI state
+src/**/*.test.ts(x)          client, transport, state и component tests
+```
 
-Добавить воспроизводимый lockfile, `npm run build`, осмысленные tests client/
-состояний UI. Зафиксировать фактически проверенные Node/npm версии.
-В конце повторить core verifier, обновить README/state/progress/notices,
-создать новый `docs/handoffs/02-frontend-to-backend.md`; Git делает человек.
+`AnalystApiClient` — единственная граница UI с данными. После любого POST 202
+он делает GET, даже если metadata уже сообщает `completed`/`failed`. Первый GET
+выполняется сразу; затем polling раз в секунду, общий deadline 5 минут. Pending
+fetch и delay отменяются при новом запуске/размонтировании. После timeout или
+HTTP error UI повторяет GET того же `run_id`, не создаёт новый run.
+
+## Семантика интерфейса
+
+- `queued`, `running`, `completed`, `failed` — lifecycle, а не знак прибыли.
+- Negative `net_arpu_gain` остаётся completed и получает отдельную business
+  подпись, не техническую ошибку.
+- Stored failed приходит как HTTP 200; HTTP 404/422/500 декодируются из
+  `ErrorResponse`.
+- `n_campaigns` и секция «Финальные кампании» не включают пилоты.
+- `campaigns_detail.gross_lift` показан как диагностическое значение до
+  дедупликации; строки явно запрещено суммировать в общий lift.
+- `roi=null` означает нулевую стоимость, `risk_score_pct=null` — «не рассчитан».
+- `UNKNOWN` означает пропуск в исходных сегментах и не предлагается как filter.
+- Остатки результата относятся ко всему прогону; остатки в пилоте — к моменту
+  пилота. Денежные значения подписаны нейтрально «ден. ед.», как в контракте.
+
+Есть loading, idle/empty, summary error/retry, polling, execution-failed,
+HTTP-error/retry и timeout/retry состояния. Таблицы имеют captions/scope,
+status использует `aria-live`, поля имеют labels и validation, виден keyboard
+focus, широкие таблицы прокручиваются, layout перестраивается до одной колонки.
+Внешние шрифты, картинки, API-ключи и Python-код не используются.
+
+## Ограничения следующего этапа
+
+HTTP transport собран и протестирован на контрактных ответах, но реальный
+FastAPI backend и сквозной E2E ещё отсутствуют. Backend должен вернуть runtime
+`source=mock_environment`, строгое JSON без NaN/Infinity и сохранить семантику,
+описанную в `contracts/README.md`. OpenAPI и organizer-owned файлы Frontend не
+менял.
