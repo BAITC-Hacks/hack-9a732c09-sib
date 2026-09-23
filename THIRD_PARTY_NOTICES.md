@@ -31,9 +31,12 @@ Python 3.13.15 проверен на архитектурном этапе, Pyth
 `requirements-dev.lock`; их собственные copyright/license notices остаются
 в установленных пакетах. Lock не означает, что все dev-пакеты нужны judge.
 
-React/Vite/TypeScript/FastAPI пока не установлены и не являются использованными
-компонентами проекта. Их notices добавляют соответствующие будущие этапы.
-Внешних UI-шаблонов, изображений или runtime LLM SDK сейчас нет.
+React 19, React DOM 19, Vite 6.4.3, TypeScript 5.7.3, Vitest 3.2.7,
+FastAPI, Pydantic, Uvicorn и httpx используются для demo/UI и их тестов; они
+не входят в judge dependency graph. Точные Python pins находятся в
+`backend/requirements*.txt`, frontend pins — в `frontend/package.json` и
+`frontend/package-lock.json`. Внешних UI-шаблонов, изображений или runtime
+LLM SDK нет: optional OpenAI transport использует стандартную библиотеку.
 
 ## AI-assisted development
 

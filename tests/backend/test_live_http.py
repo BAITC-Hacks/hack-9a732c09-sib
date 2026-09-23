@@ -20,7 +20,12 @@ def test_uvicorn_real_http():
         port = reservation.getsockname()[1]
     process = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "backend.app.main:app", "--host", "127.0.0.1", "--port", str(port)],
-        cwd=ROOT, env=dict(os.environ, PYTHONUTF8="1"), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        cwd=ROOT,
+        # A real socket check must remain offline and deterministic even when a
+        # developer has opted into the optional advisor in their shell.
+        env=dict(os.environ, PYTHONUTF8="1", FP_LLM_PROVIDER="off"),
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
         creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
     )
     try:

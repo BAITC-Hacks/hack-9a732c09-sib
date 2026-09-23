@@ -26,7 +26,7 @@ flowchart LR
   Factory -. explicit opt-in .-> LLM[OpenAI hypothesis advisor]
   Engine --> Env[Public env and run_pilot]
   Engine --> Models[Campaign / StrategyRun / Trace]
-  UI[Future React / Vite / TypeScript] --> API[FastAPI /api/v1]
+  UI[React / Vite / TypeScript] --> API[FastAPI /api/v1]
   API --> Runner[StrategyRunner]
   Runner --> Factory
   Runner --> Eval[Published local_eval evaluator]

@@ -10,14 +10,33 @@ import type {
 type FetchImplementation = typeof fetch;
 
 function normalizeOrigin(origin: string): string {
-  const normalized = origin.trim().replace(/\/+$/, "");
-  if (!normalized) {
+  const value = origin.trim();
+  if (!value) {
     throw new Error("VITE_API_BASE_URL must be a non-empty origin.");
   }
-  if (normalized.endsWith("/api/v1")) {
+
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error("VITE_API_BASE_URL must be an absolute HTTP(S) origin.");
+  }
+
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error("VITE_API_BASE_URL must use HTTP or HTTPS.");
+  }
+  if (url.username || url.password || url.search || url.hash) {
+    throw new Error("VITE_API_BASE_URL must be an origin without credentials, query, or fragment.");
+  }
+
+  const pathname = url.pathname.replace(/\/+$/, "") || "/";
+  if (pathname === "/api/v1") {
     throw new Error("VITE_API_BASE_URL must not include /api/v1.");
   }
-  return normalized;
+  if (pathname !== "/") {
+    throw new Error("VITE_API_BASE_URL must be an origin without a path.");
+  }
+  return url.origin;
 }
 
 export class HttpTransport implements ApiTransport {

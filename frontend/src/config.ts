@@ -8,8 +8,13 @@ export interface RuntimeConfig {
 }
 
 export function readRuntimeConfig(env: ImportMetaEnv = import.meta.env): RuntimeConfig {
+  const mode = env.VITE_USE_MOCKS?.trim().toLowerCase();
+  if (mode !== undefined && mode !== "" && mode !== "true" && mode !== "false") {
+    throw new Error("VITE_USE_MOCKS must be either true or false.");
+  }
+
   return {
-    useMocks: env.VITE_USE_MOCKS?.trim().toLowerCase() !== "false",
+    useMocks: mode !== "false",
     apiBaseUrl: env.VITE_API_BASE_URL?.trim() || "http://localhost:8000",
   };
 }

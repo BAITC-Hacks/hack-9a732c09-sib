@@ -1,5 +1,9 @@
 # Отчёт архитектурного bootstrap
 
+> Исторический snapshot до реализации frontend/backend. Актуальная
+> интеграционная проверка приведена в [PROJECT_STATE](PROJECT_STATE.md) и
+> [handoff 07](handoffs/07-integration-to-submission.md).
+
 Дата: 2026-09-23. Финальные результаты проверки Windows / Python 3.13.15.
 Commit: TO_BE_FILLED_AFTER_HUMAN_COMMIT
 

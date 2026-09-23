@@ -15,21 +15,41 @@ def test_provider_payload_and_validation_without_network(monkeypatch):
     calls = []
     def transport(self, url, payload):
         calls.append((url, payload))
-        return {"output": [{"type": "message", "content": [{"type": "output_text", "text": '{"order":[1,0]}'}]}]}
+        return {
+            "status": "completed",
+            "output": [{
+                "type": "message",
+                "content": [{
+                    "type": "output_text",
+                    "text": '{"priorities":{"h0":25,"h1":90}}',
+                }],
+            }],
+        }
     monkeypatch.setattr(LLMHypothesisAdvisor, "_request", transport)
     advisor = LLMHypothesisAdvisor("openai", "test-secret")
     assert advisor.prioritize(CANDIDATES, [], {}) == [1, 0]
     assert len(calls) == 1 and "ID_NUMBER" not in json.dumps(calls[0][1])
+    assert calls[0][0] == "https://api.openai.com/v1/responses"
+    assert calls[0][1]["text"]["format"]["strict"] is True
+    assert calls[0][1]["text"]["format"]["schema"]["required"] == ["priorities"]
     assert "test-secret" not in repr(advisor) and "test-secret" not in json.dumps(calls[0][1])
     with pytest.raises(ValueError, match="budget"):
         advisor.prioritize(CANDIDATES, [], {})
 
 
-@pytest.mark.parametrize("answer", ['{"order":[0,0]}', '{"order":[true,0]}', '{"order":[2,0]}',
-                                    '{"order":[0]}', '{"order":[1,0],"campaign":{}}', 'invalid JSON'])
+@pytest.mark.parametrize("answer", [
+    '{"priorities":{"h0":0,"h1":0,"extra":1}}',
+    '{"priorities":{"h0":true,"h1":0}}',
+    '{"priorities":{"h0":101,"h1":0}}',
+    '{"priorities":{"h0":0}}',
+    '{"priorities":{"h0":1,"h1":0},"campaign":{}}',
+    'invalid JSON',
+])
 def test_malformed_model_output_rejected(monkeypatch, answer):
     monkeypatch.setattr(LLMHypothesisAdvisor, "_request", lambda *args: {
-        "output": [{"type": "message", "content": [{"type": "output_text", "text": answer}]}]})
+        "status": "completed",
+        "output": [{"type": "message", "content": [{"type": "output_text", "text": answer}]}],
+    })
     with pytest.raises(ValueError):
         LLMHypothesisAdvisor("openai", "test-secret").prioritize(CANDIDATES, [], {})
 
@@ -64,4 +84,4 @@ def test_unreadable_settings_use_observable_fallback(monkeypatch, error):
     monkeypatch.setattr(configured, "settings_from_env_file", unreadable)
     result = build_engine("openai").run(ScenarioEnvironment(lambda *args: -0.3))
     assert result.campaigns
-    assert "hypothesis_advisor_fallback:ValueError" in result.warnings
+    assert "hypothesis_advisor_fallback:LLMConfigurationError" in result.warnings

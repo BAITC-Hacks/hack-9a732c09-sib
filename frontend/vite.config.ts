@@ -7,9 +7,14 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    strictPort: true,
     fs: {
       allow: [fileURLToPath(new URL("..", import.meta.url))],
     },
+  },
+  preview: {
+    port: 5173,
+    strictPort: true,
   },
   test: {
     environment: "jsdom",

@@ -67,4 +67,29 @@ describe("HttpTransport", () => {
       () => new HttpTransport("http://localhost:8000/api/v1", vi.fn()),
     ).toThrow("must not include /api/v1");
   });
+
+  it("gets the case summary from the API prefix", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ source: "mock_environment" }), { status: 200 }),
+    );
+    const transport = new HttpTransport("http://localhost:8000", fetchMock);
+
+    await transport.getCaseSummary();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/api/v1/case/summary",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it.each([
+    "relative/path",
+    "ftp://localhost:8000",
+    "http://user:pass@localhost:8000",
+    "http://localhost:8000/other",
+    "http://localhost:8000?debug=true",
+    "http://localhost:8000#fragment",
+  ])("rejects a non-origin API base URL: %s", (baseUrl) => {
+    expect(() => new HttpTransport(baseUrl, vi.fn())).toThrow();
+  });
 });
