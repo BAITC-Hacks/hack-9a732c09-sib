@@ -1,0 +1,186 @@
+{
+  "source": "mock_fixture",
+  "subscriber_count": 23441,
+  "baseline_total_arpu": 150641084.24626842,
+  "constraints": {
+    "total_budget": 100000,
+    "max_total_contacts": 15000,
+    "max_pilots": 20,
+    "min_pilot_customers": 10,
+    "max_pilot_customers": 200,
+    "max_campaigns": 10,
+    "max_customers_per_campaign": 5000
+  },
+  "channels": [
+    {
+      "name": "push",
+      "cost_per_contact": 0,
+      "conversion_multiplier": 0.5
+    },
+    {
+      "name": "sms",
+      "cost_per_contact": 4,
+      "conversion_multiplier": 0.65
+    },
+    {
+      "name": "digital_ads",
+      "cost_per_contact": 22,
+      "conversion_multiplier": 0.85
+    },
+    {
+      "name": "call",
+      "cost_per_contact": 160,
+      "conversion_multiplier": 1.2
+    }
+  ],
+  "segments": {
+    "arpu_segment": [
+      {
+        "segment": "HIGH",
+        "subscriber_count": 13918,
+        "baseline_total_arpu": 110964488.64727382
+      },
+      {
+        "segment": "LOW",
+        "subscriber_count": 2738,
+        "baseline_total_arpu": 7837703.878469851
+      },
+      {
+        "segment": "MID",
+        "subscriber_count": 6780,
+        "baseline_total_arpu": 31819792.393764094
+      },
+      {
+        "segment": "UNKNOWN",
+        "subscriber_count": 5,
+        "baseline_total_arpu": 19099.326761065964
+      }
+    ],
+    "data_segment": [
+      {
+        "segment": "HEAVY",
+        "subscriber_count": 11735,
+        "baseline_total_arpu": 84446893.21266064
+      },
+      {
+        "segment": "LITE",
+        "subscriber_count": 10253,
+        "baseline_total_arpu": 60281236.13593072
+      },
+      {
+        "segment": "NON_USER",
+        "subscriber_count": 1343,
+        "baseline_total_arpu": 5556485.809495061
+      },
+      {
+        "segment": "UNKNOWN",
+        "subscriber_count": 110,
+        "baseline_total_arpu": 356469.08818192844
+      }
+    ],
+    "call_segment": [
+      {
+        "segment": "HIGH",
+        "subscriber_count": 4416,
+        "baseline_total_arpu": 35948647.29670698
+      },
+      {
+        "segment": "LOW",
+        "subscriber_count": 10716,
+        "baseline_total_arpu": 52829839.55280356
+      },
+      {
+        "segment": "MEDIUM",
+        "subscriber_count": 8309,
+        "baseline_total_arpu": 61862597.39675754
+      }
+    ]
+  },
+  "tariffs": [
+    {
+      "tariff_plan_code": "tariff_1",
+      "price_tariff": 0.0
+    },
+    {
+      "tariff_plan_code": "tariff_2",
+      "price_tariff": 3140.0
+    },
+    {
+      "tariff_plan_code": "tariff_3",
+      "price_tariff": 5620.6
+    },
+    {
+      "tariff_plan_code": "tariff_4",
+      "price_tariff": 4678.6
+    },
+    {
+      "tariff_plan_code": "tariff_5",
+      "price_tariff": 5934.6
+    },
+    {
+      "tariff_plan_code": "tariff_6",
+      "price_tariff": 5934.6
+    },
+    {
+      "tariff_plan_code": "tariff_7",
+      "price_tariff": 5934.6
+    },
+    {
+      "tariff_plan_code": "tariff_8",
+      "price_tariff": 5934.6
+    },
+    {
+      "tariff_plan_code": "tariff_9",
+      "price_tariff": 4364.6
+    },
+    {
+      "tariff_plan_code": "tariff_10",
+      "price_tariff": 7504.6
+    },
+    {
+      "tariff_plan_code": "tariff_11",
+      "price_tariff": 9388.6
+    },
+    {
+      "tariff_plan_code": "tariff_12",
+      "price_tariff": 12528.6
+    },
+    {
+      "tariff_plan_code": "tariff_13",
+      "price_tariff": 3108.6
+    },
+    {
+      "tariff_plan_code": "tariff_14",
+      "price_tariff": 7410.4
+    },
+    {
+      "tariff_plan_code": "tariff_15",
+      "price_tariff": 3422.6
+    },
+    {
+      "tariff_plan_code": "tariff_16",
+      "price_tariff": 4364.6
+    },
+    {
+      "tariff_plan_code": "tariff_17",
+      "price_tariff": 4992.6
+    },
+    {
+      "tariff_plan_code": "tariff_18",
+      "price_tariff": 6248.6
+    },
+    {
+      "tariff_plan_code": "tariff_19",
+      "price_tariff": 6908.0
+    },
+    {
+      "tariff_plan_code": "tariff_20",
+      "price_tariff": 6562.6
+    },
+    {
+      "tariff_plan_code": "tariff_21",
+      "price_tariff": 6248.6
+    }
+  ],
+  "generated_at": "2026-09-23T10:00:00Z"
+}

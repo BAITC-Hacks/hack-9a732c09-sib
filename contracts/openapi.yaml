@@ -1,0 +1,302 @@
+openapi: 3.1.0
+info:
+  title: False Positive Demo API
+  version: 1.0.0
+  description: Contract only. Offline judge does not depend on this API. See contracts/README.md.
+servers:
+  - url: http://localhost:8000
+paths:
+  /api/v1/health:
+    get:
+      operationId: getHealth
+      responses:
+        '200':
+          description: Process is available; not a scored run.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Health'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/case/summary:
+    get:
+      operationId: getCaseSummary
+      responses:
+        '200':
+          description: Aggregates of the public synthetic case data.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CaseSummary'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/runs:
+    post:
+      operationId: createRun
+      description: Each request creates a fresh isolated mock environment. Poll GET for the result.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RunRequest'}
+      responses:
+        '202':
+          description: Run accepted. A synchronous implementation may already report completed or failed.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RunAccepted'}
+        '422':
+          description: Invalid request; normalize framework validation errors to ErrorResponse.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/runs/{run_id}:
+    get:
+      operationId: getRun
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Run snapshot. Failed execution is a stored resource, not an HTTP failure.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RunSnapshot'}
+        '404':
+          description: Unknown run or run removed by process restart.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
+        '422':
+          description: Invalid UUID.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
+        '500': {$ref: '#/components/responses/InternalError'}
+components:
+  responses:
+    InternalError:
+      description: Technical service error; do not expose stack traces or secrets.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ErrorResponse'}
+  schemas:
+    Source:
+      type: string
+      enum: [core, mock_environment, mock_fixture]
+      description: Fixtures always use mock_fixture. Scored runtime results use mock_environment.
+    RunStatus:
+      type: string
+      enum: [queued, running, completed, failed]
+      description: Execution lifecycle; a negative financial result is still completed.
+    Health:
+      type: object
+      additionalProperties: false
+      required: [status, service, version]
+      properties:
+        status: {type: string, const: ok}
+        service: {type: string, const: false-positive-api}
+        version: {type: string, minLength: 1}
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message, details]
+      properties:
+        code: {type: string, minLength: 1}
+        message: {type: string, minLength: 1}
+        details: {type: array, items: {type: string}}
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error: {$ref: '#/components/schemas/Error'}
+    Constraints:
+      type: object
+      additionalProperties: false
+      required: [total_budget, max_total_contacts, max_pilots, min_pilot_customers, max_pilot_customers, max_campaigns, max_customers_per_campaign]
+      properties:
+        total_budget: {type: number, const: 100000}
+        max_total_contacts: {type: integer, const: 15000}
+        max_pilots: {type: integer, const: 20}
+        min_pilot_customers: {type: integer, const: 10}
+        max_pilot_customers: {type: integer, const: 200}
+        max_campaigns: {type: integer, const: 10}
+        max_customers_per_campaign: {type: integer, const: 5000}
+    Channel:
+      type: object
+      additionalProperties: false
+      required: [name, cost_per_contact, conversion_multiplier]
+      properties:
+        name: {type: string, enum: [push, sms, digital_ads, call]}
+        cost_per_contact: {type: number, minimum: 0}
+        conversion_multiplier: {type: number, minimum: 0}
+    SegmentAggregate:
+      type: object
+      additionalProperties: false
+      required: [segment, subscriber_count, baseline_total_arpu]
+      properties:
+        segment: {type: string, minLength: 1, description: Public label; UNKNOWN means a missing segment and is not a valid campaign filter.}
+        subscriber_count: {type: integer, minimum: 0}
+        baseline_total_arpu: {type: number, minimum: 0}
+    SegmentAggregates:
+      type: object
+      additionalProperties: false
+      required: [arpu_segment, data_segment, call_segment]
+      properties:
+        arpu_segment: {type: array, items: {$ref: '#/components/schemas/SegmentAggregate'}}
+        data_segment: {type: array, items: {$ref: '#/components/schemas/SegmentAggregate'}}
+        call_segment: {type: array, items: {$ref: '#/components/schemas/SegmentAggregate'}}
+    Tariff:
+      type: object
+      additionalProperties: false
+      required: [tariff_plan_code, price_tariff]
+      properties:
+        tariff_plan_code: {type: string, pattern: '^tariff_[1-9][0-9]*$'}
+        price_tariff: {type: number, minimum: 0}
+    CaseSummary:
+      type: object
+      additionalProperties: false
+      required: [source, subscriber_count, baseline_total_arpu, constraints, channels, segments, tariffs, generated_at]
+      properties:
+        source: {$ref: '#/components/schemas/Source'}
+        subscriber_count: {type: integer, minimum: 1}
+        baseline_total_arpu: {type: number, exclusiveMinimum: 0}
+        constraints: {$ref: '#/components/schemas/Constraints'}
+        channels: {type: array, minItems: 1, items: {$ref: '#/components/schemas/Channel'}}
+        segments: {$ref: '#/components/schemas/SegmentAggregates'}
+        tariffs: {type: array, minItems: 1, items: {$ref: '#/components/schemas/Tariff'}}
+        generated_at: {type: string, format: date-time}
+    Campaign:
+      type: object
+      additionalProperties: false
+      required: [target_tariff, channel]
+      properties:
+        campaign_name: {type: string, minLength: 1}
+        target_tariff: {type: string, pattern: '^tariff_[1-9][0-9]*$'}
+        channel: {type: string, enum: [push, sms, digital_ads, call]}
+        filter_arpu_segment: {type: [string, 'null'], enum: [LOW, MID, HIGH, null]}
+        filter_data_segment: {type: [string, 'null'], enum: [NON_USER, LITE, HEAVY, null]}
+        filter_call_segment: {type: [string, 'null'], enum: [LOW, MEDIUM, HIGH, null]}
+        filter_current_tariff: {type: [string, 'null'], pattern: '^tariff_[1-9][0-9]*(;tariff_[1-9][0-9]*)*$'}
+    PilotObservation:
+      type: object
+      additionalProperties: false
+      required: [pilot, target_tariff, channel, n_customers, cost, observed_lift_ratio, observed_lift_total, remaining_budget, remaining_contacts, filters]
+      properties:
+        pilot: {type: string, minLength: 1}
+        target_tariff: {type: string, pattern: '^tariff_[1-9][0-9]*$'}
+        channel: {type: string, enum: [push, sms, digital_ads, call]}
+        n_customers:
+          type: integer
+          minimum: 1
+          maximum: 200
+          description: Actual count can be below the request minimum of 10.
+        cost: {type: number, minimum: 0}
+        observed_lift_ratio: {type: number}
+        observed_lift_total: {type: number}
+        remaining_budget: {type: number, minimum: 0}
+        remaining_contacts: {type: integer, minimum: 0}
+        filters:
+          type: object
+          additionalProperties: false
+          properties:
+            filter_arpu_segment: {type: [string, 'null'], enum: [LOW, MID, HIGH, null]}
+            filter_data_segment: {type: [string, 'null'], enum: [NON_USER, LITE, HEAVY, null]}
+            filter_call_segment: {type: [string, 'null'], enum: [LOW, MEDIUM, HIGH, null]}
+            filter_current_tariff: {type: [string, 'null'], pattern: '^tariff_[1-9][0-9]*(;tariff_[1-9][0-9]*)*$'}
+    CampaignDetail:
+      type: object
+      additionalProperties: false
+      required: [kind, index, name, channel, cost, n_contacts, gross_lift, n_negative, capped_at_campaign_limit, capped_at_reach_budget, capped_at_money_budget]
+      properties:
+        kind: {type: string, enum: [pilot, final]}
+        index: {type: integer, minimum: 0, description: Zero-based index in pilots or campaigns according to kind.}
+        name: {type: string}
+        channel: {type: string, enum: [push, sms, digital_ads, call]}
+        cost: {type: number, minimum: 0}
+        n_contacts: {type: integer, minimum: 0, maximum: 5000}
+        gross_lift: {type: number, description: Before cross-campaign deduplication. Do not sum as total lift.}
+        n_negative: {type: integer, minimum: 0}
+        capped_at_campaign_limit: {type: boolean}
+        capped_at_reach_budget: {type: boolean}
+        capped_at_money_budget: {type: boolean}
+    RunRequest:
+      type: object
+      additionalProperties: false
+      required: [seed, mode]
+      properties:
+        seed: {type: integer, minimum: 0, maximum: 4294967295, default: 42}
+        mode: {type: string, const: mock}
+    RunAccepted:
+      type: object
+      additionalProperties: false
+      required: [run_id, status, created_at, source]
+      properties:
+        run_id: {type: string, format: uuid}
+        status: {$ref: '#/components/schemas/RunStatus'}
+        created_at: {type: string, format: date-time}
+        source: {$ref: '#/components/schemas/Source'}
+    RunPending:
+      type: object
+      additionalProperties: false
+      required: [run_id, status, created_at, source]
+      properties:
+        run_id: {type: string, format: uuid}
+        status: {type: string, enum: [queued, running]}
+        created_at: {type: string, format: date-time}
+        source: {$ref: '#/components/schemas/Source'}
+    RunFailed:
+      type: object
+      additionalProperties: false
+      required: [run_id, status, created_at, completed_at, source, error, warnings]
+      properties:
+        run_id: {type: string, format: uuid}
+        status: {type: string, const: failed}
+        created_at: {type: string, format: date-time}
+        completed_at: {type: string, format: date-time}
+        source: {$ref: '#/components/schemas/Source'}
+        error: {$ref: '#/components/schemas/Error'}
+        warnings: {type: array, items: {type: string}}
+    RunCompleted:
+      type: object
+      additionalProperties: false
+      required: [run_id, status, source, created_at, completed_at, baseline_total_arpu, gross_arpu_lift, total_cost, net_arpu_gain, total_arpu_after, growth_vs_baseline_pct, n_pilots, n_campaigns, total_contacts, unique_customers_targeted, coverage_pct, roi, risk_score_pct, remaining_budget, remaining_contacts, pilots, campaigns, campaigns_detail, warnings, duration_ms, error]
+      properties:
+        run_id: {type: string, format: uuid}
+        status: {type: string, const: completed}
+        source: {$ref: '#/components/schemas/Source'}
+        created_at: {type: string, format: date-time}
+        completed_at: {type: string, format: date-time}
+        baseline_total_arpu: {type: number, exclusiveMinimum: 0}
+        gross_arpu_lift: {type: number}
+        total_cost: {type: number, minimum: 0, maximum: 100000}
+        net_arpu_gain: {type: number}
+        total_arpu_after: {type: number}
+        growth_vs_baseline_pct: {type: number}
+        n_pilots: {type: integer, minimum: 0, maximum: 20}
+        n_campaigns: {type: integer, minimum: 1, maximum: 10, description: Final campaigns only.}
+        total_contacts: {type: integer, minimum: 0, maximum: 15000}
+        unique_customers_targeted: {type: integer, minimum: 0}
+        coverage_pct: {type: number, minimum: 0, maximum: 100}
+        roi: {type: [number, 'null'], description: Gross lift / cost; null when cost is zero.}
+        risk_score_pct: {type: [number, 'null'], minimum: 0, maximum: 100}
+        remaining_budget: {type: number, minimum: 0, maximum: 100000}
+        remaining_contacts: {type: integer, minimum: 0, maximum: 15000}
+        pilots: {type: array, maxItems: 20, items: {$ref: '#/components/schemas/PilotObservation'}}
+        campaigns: {type: array, minItems: 1, maxItems: 10, items: {$ref: '#/components/schemas/Campaign'}}
+        campaigns_detail: {type: array, maxItems: 30, items: {$ref: '#/components/schemas/CampaignDetail'}}
+        warnings: {type: array, items: {type: string}}
+        duration_ms: {type: number, minimum: 0}
+        error: {type: 'null'}
+    RunSnapshot:
+      oneOf:
+        - {$ref: '#/components/schemas/RunPending'}
+        - {$ref: '#/components/schemas/RunCompleted'}
+        - {$ref: '#/components/schemas/RunFailed'}
+      discriminator:
+        propertyName: status
+        mapping:
+          queued: '#/components/schemas/RunPending'
+          running: '#/components/schemas/RunPending'
+          completed: '#/components/schemas/RunCompleted'
+          failed: '#/components/schemas/RunFailed'
