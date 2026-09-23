@@ -1,35 +1,107 @@
-# Backend — NOT_STARTED
+# Backend — рабочий API v1
 
-Этап 3: FastAPI, import target `backend.app.main:app`. Сейчас нет приложения,
-routes, requirements или работающего API. Начать после Frontend handoff с
-`.codex/prompts/03-backend.md` и фактического frontend API client.
+FastAPI `backend.app.main:app` запускает существующий core ровно один раз
+на run через wrapper для `local_eval.evaluate_agent`. Evaluator создаёт
+свежую официальную mock-среду и считает KPI с точными пилотными ID.
+Backend реализован по прямому запросу пользователя до frontend; контракт
+`contracts/openapi.yaml` сохранён. Фактического frontend client пока нет.
 
-Источник истины — `contracts/openapi.yaml` и `contracts/README.md`.
-Отдельные `backend/requirements.txt`; FastAPI не добавлять в judge requirements.
-Pydantic DTO адаптируют dataclass core, не становятся его зависимостью.
+## Запуск
 
-Структура: routes → StrategyRunner service → общее ядро и опубликованный
-локальный evaluator. Конкретная схема wrapper описана в ARCHITECTURE.md:
-один вызов Engine, сохранение trace, evaluator возвращает scored mock KPI.
-Никаких моделей эффектов/internals в core, никаких стратегий в routes.
-Demo использует только organizer mock environment и свежую env на каждый run.
+Команды из корня репозитория: evaluator читает относительные CSV-пути.
+Приложение не меняет cwd. Если окружения нет: `py -3 -m venv .venv`.
+Проверено на Windows / Python 3.14.7.
 
-In-memory storage достаточно, после перезапуска старый run_id → 404.
-Каждый POST → 202 и metadata; GET раскрывает snapshot. Синхронное завершение
-допускается. Для дорогого run не блокировать event loop; предусмотреть простое
-ограничение параллельных запусков. База данных и auth не нужны.
+```powershell
+$env:PYTHONUTF8 = '1'
+.\.venv\Scripts\python.exe -m pip install -r backend/requirements-dev.txt
+.\.venv\Scripts\python.exe -m uvicorn backend.app.main:app --reload
+```
 
-Особенно проверить: n_campaigns без пилотов, lifecycle отдельно от score,
-остатки после финала, ROI null вместо Infinity, строгий JSON, неполный trace,
-единый ErrorResponse для 422/404/500. Не реконструировать score из наблюдений.
+Для запуска без тестов достаточно `backend/requirements.txt`.
+Freeze dev-окружения: `backend/requirements-dev.lock`.
+На Linux/macOS используйте `.venv/bin/python`; эти ОС пока не проверены.
+API: `http://127.0.0.1:8000`, Swagger UI: `http://127.0.0.1:8000/docs`.
+В Swagger выполните POST, скопируйте run_id и вызовите GET.
 
-Будущий запуск из корня: `python -m uvicorn backend.app.main:app --reload`.
-Это плановая команда, сейчас не работает. CORS только из конфигурации для
-локальных dev origins (например localhost:5173), без wildcard с credentials.
-Добавлять .env.example только с реально читаемыми переменными, без секретов.
+## Endpoints и ручной тест
 
-Тесты: HTTP status/schema каждого endpoint, failed и unknown run, request
-validation, изоляция seed/run, mock evaluator mapping, strict JSON, CORS.
-Проверить реальный HTTP-клиент Frontend с `VITE_USE_MOCKS=false` и полный smoke.
-Повторить core verifier; обновить state/progress/README/notices и новый
-`docs/handoffs/03-backend-to-integration.md`. Git-операции делает человек.
+| Метод и путь | Результат |
+|---|---|
+| GET `/api/v1/health` | Доступность процесса |
+| GET `/api/v1/case/summary` | Агрегаты публичных CSV, ограничения, каналы, тарифы |
+| POST `/api/v1/runs` | `{ "seed": 42, "mode": "mock" }` → 202 и метаданные |
+| GET `/api/v1/runs/{run_id}` | queued / running / completed / failed |
+
+В другом PowerShell-терминале:
+
+```powershell
+$apiBase = 'http://127.0.0.1:8000'
+Invoke-RestMethod "$apiBase/api/v1/health"
+Invoke-RestMethod "$apiBase/api/v1/case/summary"
+$acceptedRun = Invoke-RestMethod "$apiBase/api/v1/runs" -Method Post -ContentType 'application/json' -Body '{"seed":42,"mode":"mock"}'
+do {
+    Start-Sleep -Seconds 1
+    $snapshot = Invoke-RestMethod "$apiBase/api/v1/runs/$($acceptedRun.run_id)"
+} while ($snapshot.status -in @('queued', 'running'))
+$snapshot | ConvertTo-Json -Depth 10
+```
+
+Один worker-поток исполняет вычисления; POST быстро возвращает queued,
+следующие задания ждут, health/GET остаются доступны. Для UI polling:
+интервал 1 секунда и timeout 5 минут.
+
+## Семантика
+
+- `source=mock_environment`; fixtures не используются runtime API.
+- `n_campaigns` — только финал; details — пилоты, затем финал с kind/index.
+  Общий gross берётся из evaluator после дедупликации, не из суммы строк
+  или noisy pilot observations.
+- Остатки учитывают пилоты и финал. При бесплатном push `roi=null` и warning.
+  NaN/Infinity не публикуются. Отрицательный net сохраняет status completed.
+- Исключения и неполный trace дают сохранённый failed, GET отвечает HTTP 200.
+  Неизвестный UUID → 404, неверный UUID/body → 422, техническая ошибка → 500.
+  Ошибки имеют ErrorResponse, без stack trace и входных секретных значений.
+- Все 23 441 абонент учитываются в summary; пропуски → UNKNOWN.
+  Индивидуальные записи абонентов API не возвращает.
+- Storage — память одного процесса. Перезапуск/--reload теряет run IDs.
+  Не запускайте несколько Uvicorn workers: память между ними не общая.
+- Нет БД/auth/LLM или внешних маркетинговых отправок. Это локальное demo.
+  Очередь и история в памяти до перезапуска; TTL, отмена и жёсткий timeout
+  вычисления не реализованы.
+
+## CORS и frontend
+
+По умолчанию разрешены `http://localhost:5173` и `http://127.0.0.1:5173`.
+Другой локальный порт задаётся в окружении процесса перед стартом:
+
+```powershell
+$env:BACKEND_CORS_ORIGINS = 'http://localhost:5173,http://127.0.0.1:5173'
+```
+
+Пустая строка отключает разрешённые origins. Wildcard и внешние hosts
+запрещены; credentials отключены. `.env` и `.env.example` автоматически не
+загружаются, API-ключи не нужны. Будущий frontend: `VITE_USE_MOCKS=false`,
+`VITE_API_BASE_URL=http://localhost:8000` (origin без `/api/v1`).
+UI build и UI/E2E пока NOT_RUN: frontend отсутствует.
+
+## Проверки
+
+```powershell
+$env:PYTHONUTF8 = '1'
+.\.venv\Scripts\python.exe -m pytest tests/backend -q
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m backend.smoke
+```
+
+Последняя команда требует запущенный сервер. `test_live_http.py` сам
+поднимает Uvicorn на свободном localhost-порту и завершает после smoke.
+Проверены mock KPI, один вызов core, strict JSON, seed isolation, lifecycle,
+неполный trace, failed/404/422/500, CORS и paid/zero-cost ROI.
+Последний pytest: 82 passed (44 core + 38 backend); один warning Starlette
+о будущем переходе TestClient с httpx на httpx2. Полный core verifier пока
+FAIL из-за существующих CRLF в organizer-файлах; judge-команды проходят.
+Детали — [handoff](../docs/handoffs/03-backend-to-integration.md).
+
+Справочники реализации: [FastAPI concurrency](https://fastapi.tiangolo.com/async/),
+[Pydantic configuration](https://docs.pydantic.dev/latest/api/config/).

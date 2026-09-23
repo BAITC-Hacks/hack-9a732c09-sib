@@ -18,3 +18,4 @@ build/
 *.tsbuildinfo
 *.egg-info/
 *.log
+public/*
