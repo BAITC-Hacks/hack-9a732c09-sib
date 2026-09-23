@@ -5,17 +5,18 @@
 и 20 пилотов. Пилоты и финальные кампании расходуют общие ресурсы. Итог —
 1–10 кампаний; критерий — прирост ARPU за вычетом затрат на коммуникации.
 
-Текущий агент — детерминированный baseline: строит сегменты по текущему
-тарифу и потреблению, выбирает следующий по публичной цене тариф и самый
-дешёвый канал, проводит до трёх пилотов и выбирает допустимый финальный план
-по наблюдениям. При неудачных пилотах возвращает fallback. Это не чат-бот:
-LLM, API-ключи и `.env` для принятия решений не нужны.
+Текущий агент строит гипотезы по публичным сегментам и ценам, проводит до
+20 пилотов с повторными подтверждениями и масштабирует подтверждённые
+кампании. При отсутствии подтверждений выбирает минимальный доступный
+fallback. По умолчанию работает без сети. Опциональный OpenAI-советник
+меняет порядок гипотез; решения о запуске по-прежнему проверяются пилотами.
 
 Работают два контура:
 
 - Judge: `agent.py:Agent.act(env) -> list[dict]`, независимое ядро `false_positive/`.
 - Demo: FastAPI `backend.app.main:app`, четыре endpoint `/api/v1`, отдельная
-  mock-среда на запуск и официальный evaluator для KPI. Frontend ещё не создан.
+  mock-среда на запуск и официальный evaluator для KPI. React frontend
+  реализован; сквозная проверка UI с текущим backend ещё не выполнена.
 
 ## Быстрый запуск backend
 
@@ -42,29 +43,83 @@ API: `http://127.0.0.1:8000`, интерактивная документаци�
 
 ## Как тестировать агента
 
+Из корня проекта в PowerShell. Команды организаторов:
+
 ```powershell
 $env:PYTHONUTF8 = '1'
+$env:FP_LLM_PROVIDER = 'off'
 .\.venv\Scripts\python.exe local_eval.py
 .\.venv\Scripts\python.exe local_eval.py --runs 10
 .\.venv\Scripts\python.exe make_submission.py
-.\.venv\Scripts\python.exe -m pytest -q
+```
+
+Один прогон показывает пилоты, затраты и net; десять seed — устойчивость.
+`make_submission.py` создаёт `submission.csv`. Mock использует судейский
+скоринг, но эффекты искусственные: результат не прогнозирует балл финала.
+
+Полная автоматическая проверка (нужны `backend/requirements-dev.txt`):
+
+```powershell
 .\.venv\Scripts\python.exe scripts/verify_core.py
 git diff --check
 ```
 
-Один прогон показывает пилоты, затраты и net; десять seed — устойчивость.
-`make_submission.py` создаёт `submission.csv`. Mock воспроизводит механику
-судейства, но не скрытые эффекты финала. Seed 42: 3 пилота, 1 финальная
-кампания, 1 285 контактов, net≈4 042; из seed 0–9 прибыльны 6.
+Verifier сам отключает LLM, проверяет 15 organizer SHA256, весь pytest,
+обе команды local_eval и два одинаковых экспорта CSV. Существующий CSV
+сохраняется; несовпадение с новым результатом требует явной регенерации.
+Успех: exit code 0 и строка
+`PASS all core/runtime/backend/contract/judge checks (offline)`.
 
-Последняя проверка: 82 tests PASS, включая реальный HTTP smoke. Полный
-verifier — FAIL из-за существующих CRLF в 14 organizer-файлах рабочей копии;
-Git HEAD и manifest совпадают. Подробности — [PROJECT_STATE](docs/PROJECT_STATE.md).
+Проверено 2026-09-23: **123 tests PASS**, включая реальный HTTP smoke;
+полный verifier PASS. Offline seed42: 19 пилотов, 1 финальная кампания,
+3 001 контакт, net≈−11.63; seed0–9: прибыльны 4/10, медиана≈−4 624.
+`Статус: FAIL` в local_eval обозначает неположительный net, а не обязательно
+ошибку исполнения. Строка «Кампаний» включает пилоты; лимит 1–10 относится
+к финальному плану. Остатки env внизу отчёта учитывают только пилоты;
+итоговые расходы/контакты показаны в общем результате scorer.
+
+## LLM-советник
+
+В локальном `.env` задайте `OPENAI_API_KEY` и при необходимости
+`OPENAI_MODEL` (по умолчанию `gpt-4.1-mini`). Поддерживается прежнее имя
+ключа `OPEN_AI_API_KEY`. Файл с ключом не включать в submission/Git.
+Одного ключа недостаточно: для штатных команд явно включите режим:
+
+```powershell
+$env:FP_LLM_PROVIDER = 'openai'
+.\.venv\Scripts\python.exe local_eval.py
+.\.venv\Scripts\python.exe local_eval.py --runs 10
+```
+
+Эти команды обращаются к платному API. Чтобы увидеть, был ли ответ модели
+принят, используйте диагностический запуск (один API-запрос на run):
+
+```powershell
+.\.venv\Scripts\python.exe scripts/evaluate_strategy.py --provider openai --runs 1
+```
+
+В `adaptive.rows` проверьте `external_advisor_used: true` и `warnings`.
+При недоступном ключе/сети или неверном ответе агент продолжает работу через
+deterministic fallback; финансовый PASS сам по себе не доказывает работу API.
+Для повторяемого offline submission верните `$env:FP_LLM_PROVIDER='off'`
+перед `make_submission.py`. LLM-режим не гарантирует одинаковый CSV по seed.
+NVIDIA отключена. Новый формат `priorities-v2` проверен заглушками API;
+live-вызов этого формата в текущей проверке NOT_RUN. Сохранённые OpenAI
+замеры относятся к прежнему формату, см. [benchmarks](docs/benchmarks/README.md).
+
+## Frontend
+
+Инструкция и переключение fixtures/HTTP: [frontend/README.md](frontend/README.md).
+Проверки отдельные: `npm --prefix frontend ci`, `npm --prefix frontend test`,
+`npm --prefix frontend run build`; нужен Node `>=20.19 <23`.
+Для работы настоящего агента выберите `VITE_USE_MOCKS=false` и запустите
+backend. Режим fixtures показывает заранее подготовленные данные.
+В текущей сессии frontend build/UI E2E NOT_RUN: Node/npm недоступны в PATH.
 
 ## Документация и работа команды
 
 [Архитектура](docs/ARCHITECTURE.md), [API v1](contracts/README.md),
 [состояние](docs/PROJECT_STATE.md), [правила](AGENTS.md),
-[backend handoff](docs/handoffs/03-backend-to-integration.md).
+[последний handoff](docs/handoffs/07-requirements-check-to-integration.md).
 Данные синтетические; источники — [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES.md).
 Codex оставляет рабочее дерево для review; commit/push выполняет человек.

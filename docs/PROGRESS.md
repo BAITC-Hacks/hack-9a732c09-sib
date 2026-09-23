@@ -35,3 +35,17 @@ Organizer-файлы не правились. Исходные 44 tests PASS. П
 неверно считал seed 0 убыточным; исправлен на seed 1. Первый CLI --runs 10
 падал на печати ⚠ в CP1251; повтор с PYTHONUTF8=1 PASS. Последний общий
 pytest: 82 passed, один warning Starlette про httpx TestClient.
+
+| Время | Участник | Роль | Commit/placeholder | Промежуточный артефакт | Команда проверки | Результат |
+|---|---|---|---|---|---|---|
+| 2026-09-23T17:25:32+05:00 | Участник + Codex | INTEGRATION | TO_BE_FILLED_AFTER_HUMAN_COMMIT | LLM regression tests, актуальные инструкции/state, handoff 07 | scripts/verify_core.py (pytest/eval/10seed/CSV×2) | PASS: 123 tests, 15 hashes, real HTTP smoke, повторяемый CSV; offline прибыльны 4/10, seed42 net≈−11.63. Live API и UI E2E NOT_RUN |
+
+Исходный HEAD 464b4c2/main, дерево чистое. Preflight: 3 failed/105 passed
+из-за старых order/ValueError ожиданий при действующем priorities-v2.
+Тесты согласованы с runtime; дополнительно проверены malformed/duplicate JSON,
+ties, incomplete/refusal, HTTP ошибки и timeout без сети. Стратегия, production
+код, organizer-файлы, контракт и `.env` не менялись. После merge активные
+документы содержали старый baseline и отсутствие frontend; исправлено по
+фактическим файлам. Существующие исторические записи/handoff сохранены.
+Node/npm недоступны в PATH, frontend проверки не повторялись. Платные API
+не вызывались; прежние OpenAI замеры не подтверждают новый prompt.

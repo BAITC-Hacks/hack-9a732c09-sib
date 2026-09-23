@@ -89,8 +89,22 @@ focus, широкие таблицы прокручиваются, layout пер
 
 ## Ограничения следующего этапа
 
-HTTP transport собран и протестирован на контрактных ответах, но реальный
-FastAPI backend и сквозной E2E ещё отсутствуют. Backend должен вернуть runtime
-`source=mock_environment`, строгое JSON без NaN/Infinity и сохранить семантику,
+HTTP transport собран и протестирован на контрактных ответах. FastAPI backend
+уже реализован в `backend/`; сквозной UI E2E ещё не выполнен. Backend возвращает runtime
+`source=mock_environment`, строгий JSON без NaN/Infinity и сохраняет семантику,
 описанную в `contracts/README.md`. OpenAPI и organizer-owned файлы Frontend не
 менял.
+
+Для подключения запустите backend из корня по `backend/README.md`, затем
+в отдельном PowerShell из корня:
+
+```powershell
+$env:VITE_USE_MOCKS = 'false'
+$env:VITE_API_BASE_URL = 'http://127.0.0.1:8000'
+npm --prefix frontend run dev -- --host 127.0.0.1 --port 5173 --strictPort
+```
+
+Проверьте HTTP transport в интерфейсе и новый прогон с
+`source=mock_environment`. Fixture transport не запускает агента.
+Результаты 18 tests/build выше относятся к frontend handoff 02;
+текущая интеграционная сессия их не повторяла: Node/npm недоступны в PATH.

@@ -1,84 +1,82 @@
 # Текущее состояние
 
-Обновлено: 2026-09-23T15:20:01+05:00.
-Текущий этап: BACKEND MVP реализован, frontend и интеграция впереди.
-Активная роль: BACKEND.
+Обновлено: 2026-09-23. Активная роль: INTEGRATION (проверка требований агента).
 Commit: TO_BE_FILLED_AFTER_HUMAN_COMMIT
-Наблюдаемый HEAD: cb803de, ветка main. Сохранены незакоммиченные изменения
-предыдущей итерации adaptive/runtime/backend.
+Наблюдаемый HEAD: 464b4c2, ветка main. До правок рабочее дерево чистое.
+Codex не выполнял Git-операций записи. После человеческого объединения веток
+активные README/state содержали старое описание baseline; синхронизированы
+с фактическим runtime и завершёнными handoff без переписывания истории.
 
 | Стадия | Статус | Состояние |
 |---|---|---|
-| Architecture / Core | DONE | Judge/baseline/контракты, 44 tests; verifier блокируется существующими окончаниями строк |
-| Frontend | NOT_STARTED | Только README/role prompt и внешние JSON fixtures |
-| Backend | IMPLEMENTED | FastAPI, runner, DTO, in-memory очередь, 38 tests, реальный HTTP smoke |
-| Final integration | NOT_STARTED | Нужны frontend, UI/E2E и восстановление organizer byte integrity |
-
-Пользователь явно попросил начать backend в текущем клоне; обычная
-последовательность FRONTEND → BACKEND изменена для этой сессии. Завершённого
-frontend handoff/client нет. Codex не делал Git-операций записи.
-Существовавшее изменение `.gitignore` (`public/*`) сохранено без правок.
+| Architecture / Core | IMPLEMENTED | Adaptive offline engine, judge boundary, контракты; 15 organizer hashes PASS |
+| Optional OpenAI | IMPLEMENTED / LIVE CHECK PENDING | Явный opt-in; priorities-v2, typed fallback, тестовые ответы PASS; новый live-вызов NOT_RUN |
+| Frontend | IMPLEMENTED / INTEGRATION PENDING | React/Vite, fixtures/HTTP client; 18 tests/build по историческому handoff 02 |
+| Backend | IMPLEMENTED | FastAPI, runner, DTO, in-memory очередь; 39 backend tests и real HTTP smoke PASS |
+| Final integration | IN_PROGRESS | Python/judge PASS; актуальные frontend build и UI E2E NOT_RUN |
 
 ## Работает
 
-Core неизменён: до трёх пилотов, финальный план/fallback, без сети/LLM/ключей.
-API `backend.app.main:app`: все четыре endpoint `/api/v1`. POST → 202/queued,
-отдельный worker выполняет один run за раз; GET → queued/running/completed/failed.
-UUID и результаты хранятся в памяти. Каждый запуск вызывает Engine ровно
-один раз внутри официального evaluator. KPI учитывают точные пилотные ID;
-неполный trace не публикуется. Строгий JSON, nullable ROI, счётчики финала,
-нормализованные ошибки, настраиваемый local CORS, summary из публичных CSV.
+`agent.py:Agent.act(env) -> list[dict]` использует общий runtime factory.
+Режим по умолчанию `off`: без сети/секретов, `.env` не читается. Core строит
+гипотезы по публичным данным, проводит до 20 пилотов с подтверждениями,
+возвращает 1–10 кампаний при доступных ресурсах или минимальный fallback.
+Масштабирование требует трёх положительных наблюдений и положительной
+осторожной оценки net; поправка на шум эвристическая, не гарантия прибыли.
 
-Fixtures по-прежнему иллюстративные mock_fixture; реальные ответы API —
-mock_environment. UI, runtime LLM, БД и UI/E2E отсутствуют.
+`FP_LLM_PROVIDER=openai` включает советника вне core. Ключ читается из
+окружения или локального `.env`; одного ключа без opt-in недостаточно.
+Один запрос/run, только агрегаты гипотез. Модель возвращает приоритеты
+фиксированных ID; код строит перестановку. Ошибка даёт observable fallback.
+NVIDIA отменена. Старые live-замеры не проверяют новый `priorities-v2`.
 
-## Последние фактические проверки
+Backend: четыре `/api/v1` endpoint, свежая official mock env на run,
+один вызов core внутри evaluator, строгий JSON, nullable ROI, CORS,
+in-memory история/очередь. Отрицательный net остаётся `completed`.
+Frontend присутствует; default fixtures не запускают агента. Для реального
+run нужен backend и `VITE_USE_MOCKS=false`. OpenAPI v1 не менялся.
 
-Windows, Python 3.14.7, локальная .venv, backend dependencies установлены.
-Короткий python в PATH указывает на неработающий WindowsApps alias.
-Команды ниже выполнены через `.venv/Scripts/python.exe`; для CLI установлен
-PYTHONUTF8=1, чтобы официальный Unicode-вывод работал в Windows.
+## Последняя фактическая проверка
+
+Windows, Python 3.14.7, локальная `.venv`, `PYTHONUTF8=1`.
+Обычный `python` в PATH — неработающий WindowsApps alias; используется
+`.venv/Scripts/python.exe`. Verifier принудительно отключает LLM и запускает
+весь pytest с уникальным временным каталогом.
 
 | Команда / сценарий | Статус | Результат |
 |---|---|---|
-| python scripts/verify_core.py, до/после | FAIL | Существующие CRLF вместо LF в 14 organizer-файлах; первая ошибка agent_template.py |
-| python local_eval.py | PASS | 3 пилота, 1 финал, 1285 контактов, cost=0, net≈4042 |
-| python local_eval.py --runs 10 | PASS | 10 завершённых прогонов; 6/10 прибыльны, min≈−41150, max≈6960 |
-| python make_submission.py | PASS | 1 финал, содержимое соответствует существующему submission |
-| scripts.verify_core.verify_submission() | PASS | Два экспорта побайтно совпали; существующий CSV сохранён |
-| python -m pytest -q | PASS | 82 passed, 28.12s: 44 core + 38 backend; 1 Starlette deprecation warning |
-| Real Uvicorn / HTTP smoke | PASS | В pytest: сервер на localhost, health/summary/POST/poll/404/422 |
-| python -m pip check | PASS | No broken requirements found |
+| scripts/verify_core.py до правок | FAIL | 105 passed / 3 failed: тесты ещё ожидали старый order и общий ValueError |
+| scripts/verify_core.py после правок | PASS | Все встроенные проверки завершены, exit 0 |
+| Organizer SHA256 | PASS | Все 15 файлов совпадают с manifest; в этой итерации не изменялись |
+| Полный pytest | PASS | 123 passed, 14.72s; один Starlette deprecation warning |
+| Реальный Uvicorn / HTTP smoke | PASS | В составе pytest; health/summary/POST/poll/404/422 |
+| local_eval.py | PASS технически / FAIL финансово | 19 пилотов, 1 финал, 3001 контакт, cost=0, net≈−11.63 |
+| local_eval.py --runs 10 | PASS технически | Прибыльны 4/10; медиана≈−4624, min≈−13553, max≈78332 |
+| make_submission.py дважды | PASS | Одинаковый CSV, исходный файл сохранён verifier |
 | git diff --check | PASS | Нет whitespace errors |
-| Frontend build/tests, UI/E2E с VITE_USE_MOCKS=false | NOT_RUN | Нет frontend package.json, client, UI и завершённого handoff |
+| Live OpenAI priorities-v2 | NOT_RUN | Проверка выполнялась без платных API-вызовов |
+| Frontend tests/build, UI E2E | NOT_RUN | Node/npm недоступны в PATH; исторический frontend handoff не заменяет текущий E2E |
 
-Первый backend test run: 35 passed / 1 failed из-за неверного предположения
-теста об отрицательном seed 0; исправлен на фактически отрицательный seed 1.
-Первый multi-seed CLI завершил вычисления, но упал на UnicodeEncodeError
-символа ⚠ в CP1251. Повтор с PYTHONUTF8=1 — PASS.
+SHA256 сгенерированного CSV:
+`08f012ca973d18a33ef258addf0312719b27b04f5bc355d3c2f2dce338c63a10`.
+Тесты обновлены под действующий формат LLM и проверяют неполные/невалидные
+ответы, дубликаты ключей, ties, refusal, HTTP ошибки и сетевые таймауты.
+Production-код, стратегия и пороги в этой итерации не менялись.
 
-## Существующая проблема byte integrity
+## Следующие проверки и ограничения
 
-Все 15 organizer-файлов в Git HEAD точно совпадают с SHA256 manifest.
-На диске 14 текстовых файлов имеют CRLF вместо LF (`i/lf w/crlf attr/-text`);
-после только CRLF→LF каждый hash совпадает. PDF совпадает сразу. Содержательных
-изменений нет. Backend-сессия не меняла эти файлы, manifest или .gitattributes.
-Полный verifier нельзя объявить PASS до восстановления побайтного состояния
-человеком/отдельной согласованной интеграцией.
+- Выполнить один live OpenAI smoke; `external_advisor_used=true` подтверждает
+  принятый ответ. Затем отдельная серия seed для текущего prompt.
+- Проверить frontend test/build и UI с настоящим HTTP backend;
+  `source=mock_environment`, POST 202 → GET completed, пилоты/финал/KPI.
+- Standalone HTML и расширенный trace из ADR 0004 пока не реализованы.
+- Mock net не прогнозирует hidden score. Offline режим неустойчив;
+  прежние OpenAI результаты относятся к прежней версии советника.
+- API запускать из корня одним процессом; перезапуск теряет историю,
+  отсутствуют TTL/отмена run и жёсткий timeout вычисления. Linux/macOS NOT_RUN.
+- Человек проверяет diff и делает commit/push. Ключи и `.env` не включать.
 
-## Ограничения и следующий шаг
-
-- Baseline не оптимизирован, net неустойчив. Mock не прогнозирует hidden score.
-  UNKNOWN в summary не является допустимым campaign filter.
-- API запускать из корня, одним процессом Uvicorn. Перезапуск теряет историю;
-  очередь/история в памяти, без TTL/отмены/жёсткого timeout выполнения.
-- Совместимость UI с API ещё не проверена; OpenAPI v1 неизменён.
-- Реализовать frontend по `.codex/prompts/02-frontend.md` с учётом готового
-  backend, затем выполнить integration prompt.
-- Перед ручным commit/push проверить diff/untracked, устранить/подтвердить
-  organizer endings и повторить verifier. Linux/macOS пока не проверены.
-
-Запуск: [README](../README.md), [backend README](../backend/README.md).
-Последний завершённый handoff:
-[03-backend-to-integration.md](handoffs/03-backend-to-integration.md).
-VERIFICATION_REPORT.md — исторический архитектурный отчёт, не текущая проверка.
+Запуск: [README](../README.md), [backend](../backend/README.md),
+[frontend](../frontend/README.md). Последний завершённый handoff:
+[07-requirements-check-to-integration.md](handoffs/07-requirements-check-to-integration.md).
+`VERIFICATION_REPORT.md` и прежние handoff — исторические результаты.
