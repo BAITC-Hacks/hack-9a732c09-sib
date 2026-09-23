@@ -1,0 +1,26 @@
+{
+  "provider": "openai",
+  "seeds": [
+    42
+  ],
+  "adaptive": {
+    "mean_net": 587846.0287350158,
+    "median_net": 587846.0287350158,
+    "min_net": 587846.0287350158,
+    "max_net": 587846.0287350158,
+    "profitable": 1,
+    "runs": 1,
+    "rows": [
+      {
+        "seed": 42,
+        "net": 587846.0287350158,
+        "cost": 0.0,
+        "contacts": 4022,
+        "pilots": 20,
+        "campaigns": 1,
+        "warnings": [],
+        "external_advisor_used": true
+      }
+    ]
+  }
+}

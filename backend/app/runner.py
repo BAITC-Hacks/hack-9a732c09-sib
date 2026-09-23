@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from math import isclose
 from time import perf_counter
 
-from false_positive.strategy.engine import StrategyEngine
+from runtime.configured import build_engine
 from local_eval import evaluate_agent
 
 from .schemas import Campaign, RunAccepted, RunCompleted
@@ -48,7 +48,7 @@ def require(condition, message):
 
 
 class StrategyRunner:
-    def __init__(self, engine_factory=StrategyEngine, evaluator=evaluate_agent):
+    def __init__(self, engine_factory=build_engine, evaluator=evaluate_agent):
         self.engine_factory = engine_factory
         self.evaluator = evaluator
 

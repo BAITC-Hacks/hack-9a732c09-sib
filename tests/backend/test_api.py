@@ -54,23 +54,24 @@ def test_health_and_public_summary(client):
     assert "ID_NUMBER" not in json.dumps(summary)
 
 
-def test_real_run_and_zero_cost(client):
+def test_real_run_accounting(client):
     accepted = submit(client)
     assert accepted["source"] == "mock_environment"
     run = poll(client, accepted["run_id"])
     assert run["status"] == "completed"
     assert run["created_at"] == accepted["created_at"] <= run["completed_at"]
-    assert run["n_pilots"] == len(run["pilots"]) == 3
-    assert run["n_campaigns"] == len(run["campaigns"]) == 1
-    assert run["total_contacts"] == 1285
-    assert run["unique_customers_targeted"] == 1185
+    assert 1 <= run["n_pilots"] == len(run["pilots"]) <= 20
+    assert 1 <= run["n_campaigns"] == len(run["campaigns"]) <= 10
+    assert run["total_contacts"] == sum(d["n_contacts"] for d in run["campaigns_detail"])
+    assert run["unique_customers_targeted"] <= run["total_contacts"] <= 15000
     assert run["remaining_contacts"] == 15000 - run["total_contacts"]
     assert run["remaining_budget"] == 100000 - run["total_cost"]
-    assert run["total_cost"] == 0 and run["roi"] is None
-    assert "roi_undefined:zero_total_cost" in run["warnings"]
-    assert [(d["kind"], d["index"]) for d in run["campaigns_detail"]] == [
-        ("pilot", 0), ("pilot", 1), ("pilot", 2), ("final", 0),
-    ]
+    if run["total_cost"] == 0:
+        assert run["roi"] is None and "roi_undefined:zero_total_cost" in run["warnings"]
+    else:
+        assert run["roi"] == pytest.approx(run["gross_arpu_lift"] / run["total_cost"])
+    assert [(d["kind"], d["index"]) for d in run["campaigns_detail"]] == (
+        [("pilot", i) for i in range(run["n_pilots"])] + [("final", i) for i in range(run["n_campaigns"])])
     assert run["gross_arpu_lift"] != sum(p["observed_lift_total"] for p in run["pilots"])
     assert run["gross_arpu_lift"] != sum(d["gross_lift"] for d in run["campaigns_detail"])
 

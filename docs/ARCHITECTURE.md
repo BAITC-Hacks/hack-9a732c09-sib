@@ -4,7 +4,8 @@
 
 Аналитик маркетинга выбирает тариф, аудиторию и канал при общем бюджете
 100 000, 15 000 контактов и 20 пилотах. Эффекты неизвестны и исследуются
-пилотами. Это bootstrap совместимого приложения, не оптимизация score.
+пилотами. Текущая стратегия добавляет повторные подтверждения и ограничение
+риска; история решения — [ADR 0002](decisions/0002-adaptive-pilots-and-optional-llm.md).
 
 Прочитаны PARTICIPANT_GUIDE.md, agent_template.py, environment.py,
 mock_environment.py, scoring_core.py, local_eval.py, make_submission.py,
@@ -20,13 +21,14 @@ CSV-заголовки и справочники. 15 исходных файло
 ```mermaid
 flowchart LR
   Judge[Judge / local_eval / make_submission] --> Adapter[root agent.py]
-  Adapter --> Agent[false_positive.agent.Agent]
-  Agent --> Engine[StrategyEngine]
+  Adapter --> Factory[runtime configured factory]
+  Factory --> Engine[StrategyEngine]
+  Factory -. explicit opt-in .-> LLM[OpenAI hypothesis advisor]
   Engine --> Env[Public env and run_pilot]
   Engine --> Models[Campaign / StrategyRun / Trace]
-  UI[Future React / Vite / TypeScript] --> API[Future FastAPI /api/v1]
-  API --> Runner[Future StrategyRunner]
-  Runner --> Engine
+  UI[Future React / Vite / TypeScript] --> API[FastAPI /api/v1]
+  API --> Runner[StrategyRunner]
+  Runner --> Factory
   Runner --> Eval[Published local_eval evaluator]
   Eval --> Mock[Organizer mock_environment]
 ```
@@ -34,26 +36,34 @@ flowchart LR
 Core импортирует только стандартную библиотеку (pandas в TYPE_CHECKING),
 работает с публичными pandas DataFrame, полученными от среды. pandas/numpy
 нужны официальным runtime-инструментам и включены в root requirements.
-FastAPI/Pydantic, Node, HTTP и БД не входят в judge dependency graph.
+FastAPI/Pydantic, Node и БД не входят в judge dependency graph. HTTP-адаптер
+лениво подключается только вне core при явном включении LLM. Режим off
+не читает `.env` и не обращается в сеть.
 
 ## Компоненты и публичные границы
 
-- `agent.py` реэкспортирует `false_positive.agent.Agent`; `act(env)` возвращает
-  обычные dict, без trace и API metadata.
+- `agent.py` использует `runtime.configured.build_engine`; `act(env)` возвращает
+  обычные dict, без trace и API metadata. Внутренний `false_positive.agent.Agent`
+  остаётся полностью offline.
 - `domain/models.py`: Campaign, PilotRequest, PilotObservation, ResourceState,
   Candidate, StrategyRun; модели dataclass, сериализация `to_dict()`.
 - `AgentEnvironmentProtocol`: только профиль, тарифы, каналы, остатки,
   pilot_history и точная сигнатура run_pilot. В pilot kwargs нет campaign_name.
-- `strategy/baseline.py`: группы current_tariff/arpu/data/call; следующая по
-  публичной цене цель, при отсутствии — другой доступный тариф. Канал с
-  минимальной публичной стоимостью. Ни истории эффектов, ни скрытой модели.
-- `StrategyEngine.run(env, observer=None) -> StrategyRun`: до трёх пилотов,
-  до 100 клиентов каждый; сохраняет хотя бы одну доступную финальную ячейку.
-  Ранжирует наблюдения по оценке net, берёт положительные допустимые кампании.
+- `strategy/candidates.py`: гипотезы по публичным ценам/ARPU, сегменты
+  current_tariff/arpu с дроблением по data/call при размере >5000.
+  `baseline.py` сохранён для маленьких fallback; `legacy.py` — прежний алгоритм
+  для сравнения. Скрытые эффекты не используются.
+- `StrategyEngine.run(env, observer=None) -> StrategyRun`: до 20 пилотов;
+  разведка до 80, подтверждение до 200 контактов. `evidence.py` требует
+  три положительных наблюдения и положительную осторожную оценку net.
+  Порог неопределённости — эвристика, не статистическая гарантия.
+- `hypothesis_advisor.prioritize(candidates, tariffs, channels)`: опциональная
+  перестановка гипотез до пилотов; плохой ответ даёт deterministic fallback.
+  Runtime ограничивает сеть одним запросом, не отправляет строки абонентов.
 - `DecisionAdvisor.rank(observations) -> list[int]`: перестановка индексов;
   некорректный ответ/ошибка заменяется DeterministicAdvisor.
-- `fallback.py`: при отсутствии положительных результатов одна доступная
-  кампания, предпочтительно лучшая измеренная. Отрицательный эффект возможен.
+- `fallback.py`: при отсутствии подтверждений одна доступная кампания из
+  списка минимальной экспозиции. Отрицательный эффект всё равно возможен.
 - TraceRecorder и observer записывают события; ошибка observer даёт warning,
   не меняет судейский план.
 
@@ -66,7 +76,7 @@ sequenceDiagram
   J->>A: act(env)
   A->>E: run(env)
   E->>V: read profile / tariffs / resources
-  loop Up to 3 feasible pilots
+  loop Up to 20 feasible pilots with repeat confirmation
     E->>V: run_pilot(PilotRequest)
     V-->>E: noisy observation and remaining resources
   end
@@ -89,15 +99,15 @@ sequenceDiagram
 исчерпанные ресурсы дают явный ValueError; невозможно обещать ненулевую
 валидную кампанию в таких условиях. Официальная стартовая среда проверена.
 
-CSV содержит пропущенные сегменты: summary показывает UNKNOWN, baseline
-исключает строки с пропусками в группировке. Ячейки >5000 тоже исключены,
+CSV содержит пропущенные сегменты: summary показывает UNKNOWN, генератор
+исключает строки с пропусками в группировке. Ячейки >5000 после дробления исключены,
 а не обрезаются тайно. Для официального профиля кандидаты остаются.
 
 `StrategyRun.pilots` содержит валидно разобранные наблюдения. Если среда
 потратила ресурсы, но вернула некорректный ответ, такой вызов помечается
 pilot_failed; его истинное выполнение остаётся в публичной pilot_history.
-Будущий demo adapter должен сверить количество с evaluator n_pilots и
-завершить run как failed при неполном trace, а не выдать неверные KPI.
+Demo adapter сверяет количество с evaluator n_pilots и завершает run как
+failed при неполном trace, а не выдаёт неверные KPI.
 
 ## Demo, скоринг и API
 
@@ -125,9 +135,12 @@ API сериализуются строгим JSON. Frontend не считает
 
 Можно заменить candidate generation, pilot policy, uncertainty estimation и
 выбор финального плана, сохранив Agent/StrategyEngine и DTO-контракт.
-LLM-порт пока только DecisionAdvisor, сетевой реализации нет. Будущая
-реализация обязана иметь ключ из env, timeout, лимит вызовов, try/except,
-валидацию и детерминированный fallback. Baseline не читает ключей или .env.
+В `runtime/llm.py` реализован внешний советник гипотез: OpenAI Responses
+со структурированным JSON. Он не заменяет обязательный
+DecisionAdvisor и не обходит доказательства от пилотов. Ошибка ключа,
+таймаут, повреждённый `.env` или ответ приводят к fallback с warning.
+Ключи не входят в core, DTO или trace. Перед воспроизводимым submission
+нужно явно установить `FP_LLM_PROVIDER=off`; LLM-режим не воспроизводим по seed.
 
 Микросервисы, обязательный Docker, БД, брокеры, auth и тяжёлые агентские
 фреймворки не выбраны. Риски: шумные пилоты и отрицательный net, отличающиеся

@@ -1,0 +1,29 @@
+{
+  "provider": "nvidia",
+  "seeds": [
+    42
+  ],
+  "adaptive": {
+    "mean_net": -11.628950469479719,
+    "median_net": -11.628950469479719,
+    "min_net": -11.628950469479719,
+    "max_net": -11.628950469479719,
+    "profitable": 0,
+    "runs": 1,
+    "rows": [
+      {
+        "seed": 42,
+        "net": -11.628950469479719,
+        "cost": 0.0,
+        "contacts": 3001,
+        "pilots": 19,
+        "campaigns": 1,
+        "warnings": [
+          "hypothesis_advisor_fallback:HTTPError",
+          "fallback_used:no_confirmed_affordable_observation"
+        ],
+        "external_advisor_used": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,255 @@
+{
+  "provider": "off",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "baseline": {
+    "mean_net": -10646.57416762607,
+    "median_net": 4004.2305370586,
+    "min_net": -41150.10744871701,
+    "max_net": 6960.256834457812,
+    "profitable": 6,
+    "runs": 10,
+    "rows": [
+      {
+        "seed": 0,
+        "net": 4253.42962463442,
+        "cost": 0.0,
+        "contacts": 1285,
+        "pilots": 3,
+        "campaigns": 1,
+        "warnings": [],
+        "external_advisor_used": false
+      },
+      {
+        "seed": 1,
+        "net": -23630.311463419566,
+        "cost": 0.0,
+        "contacts": 3616,
+        "pilots": 3,
+        "campaigns": 3,
+        "warnings": [],
+        "external_advisor_used": false
+      },
+      {
+        "seed": 2,
+        "net": -41150.10744871701,
+        "cost": 0.0,
+        "contacts": 1198,
+        "pilots": 3,
+        "campaigns": 1,
+        "warnings": [],
+        "external_advisor_used": false
+      },
+      {
+        "seed": 3,
+        "net": 4133.934123722664,
+        "cost": 0.0,
+        "contacts": 1285,
+        "pilots": 3,
+        "campaigns": 1,
+        "warnings": [],
+        "external_advisor_used": false
+      },
+      {
+        "seed": 4,
+        "net": 4050.424993586091,
+        "cost": 0.0,
+        "contacts": 1285,
+        "pilots": 3,
+        "campaigns": 1,
+        "warnings": [],
+        "external_advisor_used": false
+      },
+      {
+        "seed": 5,
+        "net": -41108.44908103733,
+        "cost": 0.0,
+        "contacts": 1198,
+        "pilots": 3,
+        "campaigns": 1,
+        "warnings": [],
+        "external_advisor_used": false
+      },
+      {
+        "seed": 6,
+        "net": 6960.256834457812,
+        "cost": 0.0,
+        "contacts": 1733,
+        "pilots": 3,
+        "campaigns": 1,
+        "warnings": [],
+        "external_advisor_used": false
+      },
+      {
+        "seed": 7,
+        "net": 6908.9047135942965,
+        "cost": 0.0,
+        "contacts": 1733,
+        "pilots": 3,
+        "campaigns": 1,
+        "warnings": [],
+        "external_advisor_used": false
+      },
+      {
+        "seed": 8,
+        "net": 3958.0360805311093,
+        "cost": 0.0,
+        "contacts": 1285,
+        "pilots": 3,
+        "campaigns": 1,
+        "warnings": [
+          "fallback_used:no_positive_affordable_observation"
+        ],
+        "external_advisor_used": false
+      },
+      {
+        "seed": 9,
+        "net": -30841.86005361317,
+        "cost": 0.0,
+        "contacts": 2631,
+        "pilots": 3,
+        "campaigns": 2,
+        "warnings": [],
+        "external_advisor_used": false
+      }
+    ]
+  },
+  "adaptive": {
+    "mean_net": 10019.516742112466,
+    "median_net": -4624.040825266897,
+    "min_net": -13552.57568582921,
+    "max_net": 78332.10102494674,
+    "profitable": 4,
+    "runs": 10,
+    "rows": [
+      {
+        "seed": 0,
+        "net": 15087.239798789089,
+        "cost": 0.0,
+        "contacts": 3001,
+        "pilots": 19,
+        "campaigns": 1,
+        "warnings": [
+          "fallback_used:no_confirmed_affordable_observation"
+        ],
+        "external_advisor_used": false
+      },
+      {
+        "seed": 1,
+        "net": -6303.725623758635,
+        "cost": 0.0,
+        "contacts": 3001,
+        "pilots": 19,
+        "campaigns": 1,
+        "warnings": [
+          "fallback_used:no_confirmed_affordable_observation"
+        ],
+        "external_advisor_used": false
+      },
+      {
+        "seed": 2,
+        "net": -6101.5356158054,
+        "cost": 0.0,
+        "contacts": 3001,
+        "pilots": 19,
+        "campaigns": 1,
+        "warnings": [
+          "fallback_used:no_confirmed_affordable_observation"
+        ],
+        "external_advisor_used": false
+      },
+      {
+        "seed": 3,
+        "net": -7930.502379421086,
+        "cost": 0.0,
+        "contacts": 3001,
+        "pilots": 19,
+        "campaigns": 1,
+        "warnings": [
+          "fallback_used:no_confirmed_affordable_observation"
+        ],
+        "external_advisor_used": false
+      },
+      {
+        "seed": 4,
+        "net": -13552.57568582921,
+        "cost": 0.0,
+        "contacts": 3001,
+        "pilots": 19,
+        "campaigns": 1,
+        "warnings": [
+          "fallback_used:no_confirmed_affordable_observation"
+        ],
+        "external_advisor_used": false
+      },
+      {
+        "seed": 5,
+        "net": -6201.694993060579,
+        "cost": 0.0,
+        "contacts": 3001,
+        "pilots": 19,
+        "campaigns": 1,
+        "warnings": [
+          "fallback_used:no_confirmed_affordable_observation"
+        ],
+        "external_advisor_used": false
+      },
+      {
+        "seed": 6,
+        "net": 25838.324410232886,
+        "cost": 0.0,
+        "contacts": 3001,
+        "pilots": 19,
+        "campaigns": 1,
+        "warnings": [
+          "fallback_used:no_confirmed_affordable_observation"
+        ],
+        "external_advisor_used": false
+      },
+      {
+        "seed": 7,
+        "net": -3146.5460347283924,
+        "cost": 0.0,
+        "contacts": 3001,
+        "pilots": 19,
+        "campaigns": 1,
+        "warnings": [
+          "fallback_used:no_confirmed_affordable_observation"
+        ],
+        "external_advisor_used": false
+      },
+      {
+        "seed": 8,
+        "net": 24174.08251975925,
+        "cost": 0.0,
+        "contacts": 3001,
+        "pilots": 19,
+        "campaigns": 1,
+        "warnings": [
+          "fallback_used:no_confirmed_affordable_observation"
+        ],
+        "external_advisor_used": false
+      },
+      {
+        "seed": 9,
+        "net": 78332.10102494674,
+        "cost": 0.0,
+        "contacts": 4633,
+        "pilots": 19,
+        "campaigns": 1,
+        "warnings": [],
+        "external_advisor_used": false
+      }
+    ]
+  }
+}

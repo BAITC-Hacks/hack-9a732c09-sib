@@ -10,6 +10,7 @@ from backend.app.runner import StrategyRunner
 from backend.app.schemas import RunAccepted
 from backend.app.service import RunService
 from false_positive.strategy.engine import StrategyEngine
+from false_positive.strategy.legacy import LegacyStrategyEngine
 from local_eval import evaluate_agent
 from tests.backend.test_api import poll, submit
 
@@ -58,9 +59,15 @@ def test_paid_final_budget_comes_from_scoring():
 
 
 def test_negative_score_is_completed():
-    result = StrategyRunner().run(metadata(), 1)
+    result = StrategyRunner(LegacyStrategyEngine).run(metadata(), 1)
     assert result.net_arpu_gain < 0
     assert result.status == "completed" and result.error is None
+
+
+def test_zero_cost_roi_remains_null():
+    result = StrategyRunner(LegacyStrategyEngine).run(metadata(), 42)
+    assert result.total_cost == 0 and result.roi is None
+    assert "roi_undefined:zero_total_cost" in result.warnings
 
 
 @pytest.mark.parametrize("failure", ["exception_after_pilots", "missing_pilot", "invalid_campaign"])

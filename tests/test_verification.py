@@ -1,8 +1,21 @@
 """Pre-flight must preserve an existing artifact when generation fails/drifts."""
 
 import pytest
+from types import SimpleNamespace
 
 from scripts import verify_core
+
+
+def test_verifier_overrides_llm_mode_only_in_child_process(monkeypatch):
+    monkeypatch.setenv("FP_LLM_PROVIDER", "openai")
+    captured = {}
+    def fake_run(command, **kwargs):
+        captured.update(kwargs["env"])
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+    monkeypatch.setattr(verify_core.subprocess, "run", fake_run)
+    verify_core.run(["make_submission.py"])
+    assert captured["FP_LLM_PROVIDER"] == "off"
+    assert verify_core.os.environ["FP_LLM_PROVIDER"] == "openai"
 
 
 @pytest.mark.parametrize("failure", ["stale", "crash", "nondeterministic"])

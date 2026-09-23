@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+from tempfile import TemporaryDirectory
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -15,7 +16,8 @@ def run(args):
     print("RUN python " + " ".join(args), flush=True)
     result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, encoding="utf-8",
                             errors="replace", timeout=300,
-                            env=dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1"))
+                            env=dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1",
+                                     FP_LLM_PROVIDER="off"))
     print(result.stdout, end="")
     if result.stderr:
         print(result.stderr, file=sys.stderr, end="")
@@ -57,11 +59,15 @@ def main():
         if actual != expected:
             raise RuntimeError(f"Organizer file changed: {relative}")
     print(f"PASS organizer integrity: {len(manifest['sha256'])} files", flush=True)
-    run(["-m", "pytest", "-q", "tests/test_agent_contract.py", "tests/test_core_models.py", "tests/test_contract_fixtures.py", "tests/test_verification.py"])
+    # A fresh temp root avoids stale Windows pytest permissions. Include runtime
+    # and backend regressions, not only the original bootstrap test files.
+    with TemporaryDirectory(prefix="false-positive-verify-") as temporary:
+        run(["-m", "pytest", "-q", "-p", "no:cacheprovider",
+             "--basetemp", str(Path(temporary) / "pytest")])
     run(["local_eval.py"])
     run(["local_eval.py", "--runs", "10"])
     verify_submission()
-    print("PASS all core/contract/judge checks")
+    print("PASS all core/runtime/backend/contract/judge checks (offline)")
     return 0
 
 

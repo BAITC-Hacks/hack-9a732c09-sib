@@ -34,10 +34,10 @@ def check_api(base_url, timeout=30):
         if run["status"] == "failed":
             raise AssertionError(f"Run failed: {run['error']['code']}")
         if run["status"] == "completed":
-            assert run["n_pilots"] == len(run["pilots"]) == 3
+            assert 1 <= run["n_pilots"] == len(run["pilots"]) <= 20
             assert run["n_campaigns"] == len(run["campaigns"])
             assert run["remaining_contacts"] == 15000 - run["total_contacts"]
-            assert run["roi"] is None and run["total_cost"] == 0
+            assert (run["roi"] is None) == (run["total_cost"] == 0)
             break
         sleep(.1)
     else:

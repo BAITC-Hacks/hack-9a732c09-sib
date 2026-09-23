@@ -1,14 +1,14 @@
 # Этап 2 — FRONTEND, команда False Positive
 
 Ты новая независимая Codex-сессия. Прошлый чат недоступен, состояние берётся
-только из репозитория. Начать после человеческого review/commit/push ARCHITECT
+только из репозитория. Начать после человеческого review/commit/push текущего этапа
 и `git pull --ff-only` участником Frontend. Сам не выполняй pull/commit/push,
 checkout/merge/rebase/reset/clean. Не создавай параллельную ветку.
 
 Сначала прочитай по порядку: AGENTS.md → README.md → docs/ARCHITECTURE.md →
 docs/PROJECT_STATE.md → docs/COLLABORATION.md → contracts/openapi.yaml и
-contracts/README.md → последний завершённый handoff (ожидается
-docs/handoffs/01-architecture-to-frontend.md) → этот role prompt →
+contracts/README.md → последний завершённый handoff из PROJECT_STATE
+(не исторический handoff 01 и не .template) → этот role prompt →
 docs/OWNERSHIP.md → frontend/README.md → contracts/examples/*.json.
 
 Проверь `git status --short`, ветку и последние 10 commits. Если дерево грязное,
@@ -17,8 +17,9 @@ docs/OWNERSHIP.md → frontend/README.md → contracts/examples/*.json.
 функцию реализованной только потому, что она упоминается в документации.
 
 Реализуй React + Vite + TypeScript приложение аналитика в frontend/.
-Backend на этом этапе может отсутствовать: начинать в mock-mode по fixtures.
-Переменные `VITE_USE_MOCKS=true` и `VITE_API_BASE_URL=http://localhost:8000`
+Backend уже реализован: сверить реальные ответы по backend/README.md.
+Поддержать fixtures для автономной разработки, проверить HTTP-режим с сервером.
+Переменные `VITE_USE_MOCKS=false` и `VITE_API_BASE_URL=http://localhost:8000`
 (origin, без /api/v1). Один типизированный API client, взаимозаменяемые mock
 и HTTP transports, статусы queued/running/completed/failed и HTTP ошибки.
 POST всегда 202, затем GET, включая мгновенно завершённый запуск.
@@ -35,12 +36,13 @@ agent.py/false_positive/organizer файлы. Не ломай OpenAPI. Если 
 
 Добавь frontend package.json, lockfile, фактические setup/env инструкции.
 Запусти build и тесты состояния/client, затем core verifier и git diff --check.
+Для полного verifier установить backend/requirements-dev.txt (включает root dev).
 Запиши проверенные Node/npm версии без предположений. Обнови README,
 PROJECT_STATE, допиши PROGRESS и THIRD_PARTY_NOTICES, создай новый
-docs/handoffs/02-frontend-to-backend.md по template, перечислив client paths,
+handoff с очередным свободным номером `<NN>-frontend-to-integration.md`, перечислив client paths,
 ожидания к API, проверки и ограничения. Старый handoff не переписывай.
 
-Критерий завершения: UI работает без backend по согласованным fixtures,
-реальный транспорт готов к подключению, build/tests пройдены, judge сохранён,
-контекст передан Backend. Финал — изменения, реальные PASS/FAIL/NOT_RUN,
+Критерий завершения: UI работает по fixtures и с существующим backend,
+реальный транспорт проверен, build/tests пройдены, judge сохранён,
+контекст передан Integration. Финал — изменения, реальные PASS/FAIL/NOT_RUN,
 риски и рекомендация commit, без выполнения commit/push.

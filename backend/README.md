@@ -66,7 +66,8 @@ $snapshot | ConvertTo-Json -Depth 10
   Индивидуальные записи абонентов API не возвращает.
 - Storage — память одного процесса. Перезапуск/--reload теряет run IDs.
   Не запускайте несколько Uvicorn workers: память между ними не общая.
-- Нет БД/auth/LLM или внешних маркетинговых отправок. Это локальное demo.
+- Нет БД/auth или внешних маркетинговых отправок. Это локальное demo.
+  LLM-советник опционален через общий runtime, по умолчанию выключен.
   Очередь и история в памяти до перезапуска; TTL, отмена и жёсткий timeout
   вычисления не реализованы.
 
@@ -80,8 +81,11 @@ $env:BACKEND_CORS_ORIGINS = 'http://localhost:5173,http://127.0.0.1:5173'
 ```
 
 Пустая строка отключает разрешённые origins. Wildcard и внешние hosts
-запрещены; credentials отключены. `.env` и `.env.example` автоматически не
-загружаются, API-ключи не нужны. Будущий frontend: `VITE_USE_MOCKS=false`,
+запрещены; credentials отключены. CORS читается из окружения процесса.
+Для LLM перед запуском Uvicorn задайте `$env:FP_LLM_PROVIDER='openai'`:
+тогда ключ/модель читаются из корневого `.env`. Режим `'off'`
+не читает файл и не требует ключей. Подробности — [корневой README](../README.md#llm-советник).
+Будущий frontend: `VITE_USE_MOCKS=false`,
 `VITE_API_BASE_URL=http://localhost:8000` (origin без `/api/v1`).
 UI build и UI/E2E пока NOT_RUN: frontend отсутствует.
 
@@ -89,6 +93,7 @@ UI build и UI/E2E пока NOT_RUN: frontend отсутствует.
 
 ```powershell
 $env:PYTHONUTF8 = '1'
+$env:FP_LLM_PROVIDER = 'off'
 .\.venv\Scripts\python.exe -m pytest tests/backend -q
 .\.venv\Scripts\python.exe -m pytest -q
 .\.venv\Scripts\python.exe -m backend.smoke
@@ -98,10 +103,13 @@ $env:PYTHONUTF8 = '1'
 поднимает Uvicorn на свободном localhost-порту и завершает после smoke.
 Проверены mock KPI, один вызов core, strict JSON, seed isolation, lifecycle,
 неполный trace, failed/404/422/500, CORS и paid/zero-cost ROI.
-Последний pytest: 82 passed (44 core + 38 backend); один warning Starlette
-о будущем переходе TestClient с httpx на httpx2. Полный core verifier пока
-FAIL из-за существующих CRLF в organizer-файлах; judge-команды проходят.
-Детали — [handoff](../docs/handoffs/03-backend-to-integration.md).
+Последний pytest: 108 passed (69 core/runtime + 39 backend); один warning Starlette
+о будущем переходе TestClient с httpx на httpx2. Полный verifier PASS после
+восстановления исходных LF и проверки 15 SHA256. Judge-команды завершаются;
+отрицательный финансовый результат в local_eval помечается scorer как FAIL.
+Verifier теперь запускает весь pytest с уникальным временным каталогом и
+принудительным provider off; нужны backend/requirements-dev.txt.
+Детали — [handoff](../docs/handoffs/06-verification-to-frontend.md).
 
 Справочники реализации: [FastAPI concurrency](https://fastapi.tiangolo.com/async/),
 [Pydantic configuration](https://docs.pydantic.dev/latest/api/config/).
