@@ -1,54 +1,84 @@
-# Текущее состояние проекта
+# Текущее состояние
 
-Дата интеграционной проверки: 2026-09-23. Базовый commit до этих локальных
-правок: `464b4c2`; commit/push остаются за человеком.
+Обновлено: 2026-09-23T15:20:01+05:00.
+Текущий этап: BACKEND MVP реализован, frontend и интеграция впереди.
+Активная роль: BACKEND.
+Commit: TO_BE_FILLED_AFTER_HUMAN_COMMIT
+Наблюдаемый HEAD: cb803de, ветка main. Сохранены незакоммиченные изменения
+предыдущей итерации adaptive/runtime/backend.
 
-## Слои
-
-| Слой | Статус | Проверенный результат |
+| Стадия | Статус | Состояние |
 |---|---|---|
-| Judge/core | READY | `agent.py` сохраняет сигнатуру, offline по умолчанию, submission повторяем |
-| Optional LLM | READY, optional | Один OpenAI request/run, строгая схема priorities, безопасный fallback |
-| Backend API | READY | FastAPI `/api/v1`, in-memory lifecycle, CORS и реальный HTTP smoke |
-| Frontend | READY | React/Vite dashboard, mock/live transport, строгая config validation |
-| UI/API integration | READY | Реальный client прошёл CORS, summary, POST 202 и `running → completed` |
-| Organizer files | INTACT | 15 из 15 SHA256 совпадают с `docs/organizer-manifest.json` |
+| Architecture / Core | DONE | Judge/baseline/контракты, 44 tests; verifier блокируется существующими окончаниями строк |
+| Frontend | NOT_STARTED | Только README/role prompt и внешние JSON fixtures |
+| Backend | IMPLEMENTED | FastAPI, runner, DTO, in-memory очередь, 38 tests, реальный HTTP smoke |
+| Final integration | NOT_STARTED | Нужны frontend, UI/E2E и восстановление organizer byte integrity |
 
-## Выполненные проверки
+Пользователь явно попросил начать backend в текущем клоне; обычная
+последовательность FRONTEND → BACKEND изменена для этой сессии. Завершённого
+frontend handoff/client нет. Codex не делал Git-операций записи.
+Существовавшее изменение `.gitignore` (`public/*`) сохранено без правок.
+
+## Работает
+
+Core неизменён: до трёх пилотов, финальный план/fallback, без сети/LLM/ключей.
+API `backend.app.main:app`: все четыре endpoint `/api/v1`. POST → 202/queued,
+отдельный worker выполняет один run за раз; GET → queued/running/completed/failed.
+UUID и результаты хранятся в памяти. Каждый запуск вызывает Engine ровно
+один раз внутри официального evaluator. KPI учитывают точные пилотные ID;
+неполный trace не публикуется. Строгий JSON, nullable ROI, счётчики финала,
+нормализованные ошибки, настраиваемый local CORS, summary из публичных CSV.
+
+Fixtures по-прежнему иллюстративные mock_fixture; реальные ответы API —
+mock_environment. UI, runtime LLM, БД и UI/E2E отсутствуют.
+
+## Последние фактические проверки
+
+Windows, Python 3.14.7, локальная .venv, backend dependencies установлены.
+Короткий python в PATH указывает на неработающий WindowsApps alias.
+Команды ниже выполнены через `.venv/Scripts/python.exe`; для CLI установлен
+PYTHONUTF8=1, чтобы официальный Unicode-вывод работал в Windows.
 
 | Команда / сценарий | Статус | Фактический результат |
 |---|---|---|
-| `python -m pip check` | PASS | Broken requirements отсутствуют |
-| `python -m pytest -p no:cacheprovider -q` | PASS | 108 passed, 1 Starlette deprecation warning |
-| `python scripts/verify_core.py` | PASS | 15 hashes, pytest, два eval и два идентичных CSV exports |
-| `python local_eval.py --runs 10` | PASS | Все запуски завершены без нарушения лимитов |
-| `npm ci && npm test && npm run build` | PASS | 6 файлов, 28 тестов; TypeScript/Vite build проходит |
-| `npm run smoke:live` с FastAPI | PASS | CORS, summary, настоящий `HttpTransport`, POST 202 и polling |
-| Vite production preview на 5173 | PASS | App shell 200, backend CORS разрешает origin |
-| `npm audit --omit=dev` | PASS | 0 production vulnerabilities |
+| python scripts/verify_core.py, до/после | FAIL | Существующие CRLF вместо LF в 14 organizer-файлах; первая ошибка agent_template.py |
+| python local_eval.py | PASS | 3 пилота, 1 финал, 1285 контактов, cost=0, net≈4042 |
+| python local_eval.py --runs 10 | PASS | 10 завершённых прогонов; 6/10 прибыльны, min≈−41150, max≈6960 |
+| python make_submission.py | PASS | 1 финал, содержимое соответствует существующему submission |
+| scripts.verify_core.verify_submission() | PASS | Два экспорта побайтно совпали; существующий CSV сохранён |
+| python -m pytest -q | PASS | 82 passed, 28.12s: 44 core + 38 backend; 1 Starlette deprecation warning |
+| Real Uvicorn / HTTP smoke | PASS | В pytest: сервер на localhost, health/summary/POST/poll/404/422 |
+| python -m pip check | PASS | No broken requirements found |
+| git diff --check | PASS | Нет whitespace errors |
+| Frontend build/tests, UI/E2E с VITE_USE_MOCKS=false | NOT_RUN | Нет frontend package.json, client, UI и завершённого handoff |
 
-## Ограничения и риски
+Первый backend test run: 35 passed / 1 failed из-за неверного предположения
+теста об отрицательном seed 0; исправлен на фактически отрицательный seed 1.
+Первый multi-seed CLI завершил вычисления, но упал на UnicodeEncodeError
+символа ⚠ в CP1251. Повтор с PYTHONUTF8=1 — PASS.
 
-- Финансовая устойчивость **не подтверждена**: seed 42 даёт около −12, из
-  seed 0–9 прибыльны 4. Это следует показывать как риск стратегии, не как
-  техническую ошибку API/UI.
-- В `npm audit` остаются 2 moderate advisory только в dev-зависимости Vitest.
-  Их исправление требует major upgrade Vitest 5; production audit чист.
-- Visual browser automation не настроена. Повторяемый live smoke исполняет
-  реальные frontend modules через Vite и отдельно проверяет CORS preflight.
-- Optional OpenAI mode не проверялся реальным ключом в этой интеграционной
-  сессии; default/offline путь полностью проверен.
+## Существующая проблема byte integrity
 
-## Инварианты
+Все 15 organizer-файлов в Git HEAD точно совпадают с SHA256 manifest.
+На диске 14 текстовых файлов имеют CRLF вместо LF (`i/lf w/crlf attr/-text`);
+после только CRLF→LF каждый hash совпадает. PDF совпадает сразу. Содержательных
+изменений нет. Backend-сессия не меняла эти файлы, manifest или .gitattributes.
+Полный verifier нельзя объявить PASS до восстановления побайтного состояния
+человеком/отдельной согласованной интеграцией.
 
-- Не менять organizer-owned файлы из manifest.
-- `FP_LLM_PROVIDER=off` обязателен для verifier и submission.
-- API prefix `/api/v1`, POST run → HTTP 202, frontend делает обязательный GET.
-- `n_campaigns` содержит только финальные кампании; nullable ROI/risk
-  остаются nullable во всех слоях.
-- Dev и preview frontend используют 5173, разрешённый default backend CORS.
+## Ограничения и следующий шаг
 
-Следующие действия для человека: изучить
-[handoff 07](handoffs/07-integration-to-submission.md), проверить `git diff`,
-создать commit и при необходимости отдельно принять решение о major-upgrade
-Vitest.
+- Baseline не оптимизирован, net неустойчив. Mock не прогнозирует hidden score.
+  UNKNOWN в summary не является допустимым campaign filter.
+- API запускать из корня, одним процессом Uvicorn. Перезапуск теряет историю;
+  очередь/история в памяти, без TTL/отмены/жёсткого timeout выполнения.
+- Совместимость UI с API ещё не проверена; OpenAPI v1 неизменён.
+- Реализовать frontend по `.codex/prompts/02-frontend.md` с учётом готового
+  backend, затем выполнить integration prompt.
+- Перед ручным commit/push проверить diff/untracked, устранить/подтвердить
+  organizer endings и повторить verifier. Linux/macOS пока не проверены.
+
+Запуск: [README](../README.md), [backend README](../backend/README.md).
+Последний завершённый handoff:
+[03-backend-to-integration.md](handoffs/03-backend-to-integration.md).
+VERIFICATION_REPORT.md — исторический архитектурный отчёт, не текущая проверка.

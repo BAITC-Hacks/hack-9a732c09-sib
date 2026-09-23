@@ -92,15 +92,10 @@ status использует `aria-live`, поля имеют labels и validatio
 focus, широкие таблицы прокручиваются, layout перестраивается до одной колонки.
 Внешние шрифты, картинки, API-ключи и Python-код не используются.
 
-## Live smoke
+## Ограничения следующего этапа
 
-При уже запущенном API выполните:
-
-```powershell
-$env:API_BASE_URL = 'http://127.0.0.1:8000'
-npm run smoke:live
-```
-
-Команда проверяет CORS preflight, runtime config, summary и полный реальный
-POST → GET polling через frontend modules. Visual browser automation отдельно
-не настроена; OpenAPI и organizer-owned файлы frontend не меняет.
+HTTP transport собран и протестирован на контрактных ответах, но реальный
+FastAPI backend и сквозной E2E ещё отсутствуют. Backend должен вернуть runtime
+`source=mock_environment`, строгое JSON без NaN/Infinity и сохранить семантику,
+описанную в `contracts/README.md`. OpenAPI и organizer-owned файлы Frontend не
+менял.

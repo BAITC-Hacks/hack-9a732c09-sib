@@ -1,30 +1,33 @@
 import json
+from io import BytesIO
+from urllib.error import HTTPError, URLError
 
 import pytest
 
 from false_positive.domain.models import Campaign, Candidate
 from runtime.configured import build_engine
-from runtime.llm import LLMHypothesisAdvisor
+from runtime.llm import (
+    LLMAuthenticationError, LLMCallLimitError, LLMConfigurationError,
+    LLMHypothesisAdvisor, LLMIncompleteResponse, LLMInvalidJSON,
+    LLMInvalidPriorities, LLMNetworkError, LLMProviderError, LLMRateLimitError,
+    LLMRefusal, LLMResponseShapeError, LLMTimeoutError,
+)
 
 
 CANDIDATES = [Candidate(Campaign("tariff_2", "push"), 100, 200000., 0.),
               Candidate(Campaign("tariff_3", "push"), 200, 400000., 0.)]
 
 
+def completed_response(answer):
+    return {"status": "completed", "output": [{"type": "message", "content": [
+        {"type": "output_text", "text": answer}]}]}
+
+
 def test_provider_payload_and_validation_without_network(monkeypatch):
     calls = []
     def transport(self, url, payload):
         calls.append((url, payload))
-        return {
-            "status": "completed",
-            "output": [{
-                "type": "message",
-                "content": [{
-                    "type": "output_text",
-                    "text": '{"priorities":{"h0":25,"h1":90}}',
-                }],
-            }],
-        }
+        return {"output": [{"type": "message", "content": [{"type": "output_text", "text": '{"order":[1,0]}'}]}]}
     monkeypatch.setattr(LLMHypothesisAdvisor, "_request", transport)
     advisor = LLMHypothesisAdvisor("openai", "test-secret")
     assert advisor.prioritize(CANDIDATES, [], {}) == [1, 0]
@@ -33,25 +36,84 @@ def test_provider_payload_and_validation_without_network(monkeypatch):
     assert calls[0][1]["text"]["format"]["strict"] is True
     assert calls[0][1]["text"]["format"]["schema"]["required"] == ["priorities"]
     assert "test-secret" not in repr(advisor) and "test-secret" not in json.dumps(calls[0][1])
-    with pytest.raises(ValueError, match="budget"):
+    schema = calls[0][1]["text"]["format"]["schema"]["properties"]["priorities"]
+    assert set(schema["required"]) == {"h0", "h1"}
+    assert schema["additionalProperties"] is False
+    assert advisor.diagnostics["status"] == "accepted"
+    assert "test-secret" not in json.dumps(advisor.diagnostics)
+    with pytest.raises(LLMCallLimitError, match="budget"):
         advisor.prioritize(CANDIDATES, [], {})
+    assert len(calls) == 1
 
 
-@pytest.mark.parametrize("answer", [
-    '{"priorities":{"h0":0,"h1":0,"extra":1}}',
-    '{"priorities":{"h0":true,"h1":0}}',
-    '{"priorities":{"h0":101,"h1":0}}',
-    '{"priorities":{"h0":0}}',
-    '{"priorities":{"h0":1,"h1":0},"campaign":{}}',
-    'invalid JSON',
-])
+@pytest.mark.parametrize("answer", ['{"order":[0,0]}', '{"order":[true,0]}', '{"order":[2,0]}',
+                                    '{"order":[0]}', '{"order":[1,0],"campaign":{}}', 'invalid JSON'])
 def test_malformed_model_output_rejected(monkeypatch, answer):
     monkeypatch.setattr(LLMHypothesisAdvisor, "_request", lambda *args: {
-        "status": "completed",
-        "output": [{"type": "message", "content": [{"type": "output_text", "text": answer}]}],
-    })
+        "output": [{"type": "message", "content": [{"type": "output_text", "text": answer}]}]})
     with pytest.raises(ValueError):
         LLMHypothesisAdvisor("openai", "test-secret").prioritize(CANDIDATES, [], {})
+
+
+def test_priority_ties_preserve_order_without_duplicate_hypotheses(monkeypatch):
+    monkeypatch.setattr(LLMHypothesisAdvisor, "_request", lambda *args:
+                        completed_response('{"priorities":{"h1":50,"h0":50}}'))
+    assert LLMHypothesisAdvisor("openai", "test-secret").prioritize(CANDIDATES, [], {}) == [0, 1]
+
+
+@pytest.mark.parametrize("response,category", [
+    ({"status": "incomplete", "incomplete_details": {"reason": "max_output_tokens"}}, LLMIncompleteResponse),
+    ({"status": "completed", "output": [{"type": "message", "content": [
+        {"type": "refusal", "refusal": "private provider text"}]}]}, LLMRefusal),
+    ({"status": "completed", "output": []}, LLMResponseShapeError),
+    ({"status": "failed"}, LLMResponseShapeError),
+])
+def test_unusable_responses_have_safe_error_categories(monkeypatch, response, category):
+    monkeypatch.setattr(LLMHypothesisAdvisor, "_request", lambda *args: response)
+    advisor = LLMHypothesisAdvisor("openai", "test-secret")
+    with pytest.raises(category) as caught:
+        advisor.prioritize(CANDIDATES, [], {})
+    assert advisor.diagnostics["error_code"] == category.__name__
+    assert "private provider text" not in str(caught.value) + json.dumps(advisor.diagnostics)
+
+
+@pytest.mark.parametrize("status,category", [
+    (401, LLMAuthenticationError), (429, LLMRateLimitError), (503, LLMProviderError),
+])
+def test_http_failures_do_not_expose_provider_body(monkeypatch, status, category):
+    import runtime.llm as llm
+    error = HTTPError("https://api.openai.com/v1/responses", status, "private message",
+                      {}, BytesIO(b"private body"))
+    class FailingOpener:
+        def open(self, *args, **kwargs):
+            raise error
+    monkeypatch.setattr(llm, "build_opener", lambda *args: FailingOpener())
+    advisor = LLMHypothesisAdvisor("openai", "test-secret")
+    with pytest.raises(category) as caught:
+        advisor.prioritize(CANDIDATES, [], {})
+    assert advisor.diagnostics["http_status"] == status
+    assert advisor.diagnostics["error_code"] == category.__name__
+    assert error.fp.closed
+    assert "private" not in str(caught.value) + json.dumps(advisor.diagnostics)
+    assert "test-secret" not in str(caught.value) + json.dumps(advisor.diagnostics)
+
+
+@pytest.mark.parametrize("error,category", [
+    (TimeoutError("private timeout"), LLMTimeoutError),
+    (URLError(TimeoutError("private timeout")), LLMTimeoutError),
+    (URLError("private network"), LLMNetworkError),
+])
+def test_connection_failures_have_safe_error_categories(monkeypatch, error, category):
+    import runtime.llm as llm
+    class FailingOpener:
+        def open(self, *args, **kwargs):
+            raise error
+    monkeypatch.setattr(llm, "build_opener", lambda *args: FailingOpener())
+    advisor = LLMHypothesisAdvisor("openai", "test-secret")
+    with pytest.raises(category) as caught:
+        advisor.prioritize(CANDIDATES, [], {})
+    assert advisor.diagnostics["error_code"] == category.__name__
+    assert "private" not in str(caught.value) + json.dumps(advisor.diagnostics)
 
 
 def test_offline_mode_never_reads_env_file(monkeypatch):
@@ -70,7 +132,7 @@ def test_key_alias_and_missing_key_are_controlled(monkeypatch):
     assert build_engine("openai").hypothesis_advisor.api_key == "test-secret"
     monkeypatch.setattr(configured, "settings_from_env_file", lambda: {})
     advisor = build_engine("openai").hypothesis_advisor
-    with pytest.raises(ValueError, match="configuration"):
+    with pytest.raises(LLMConfigurationError, match="configuration"):
         advisor.prioritize(CANDIDATES, [], {})
 
 

@@ -3,8 +3,8 @@
 FastAPI `backend.app.main:app` запускает существующий core ровно один раз
 на run через wrapper для `local_eval.evaluate_agent`. Evaluator создаёт
 свежую официальную mock-среду и считает KPI с точными пилотными ID.
-Контракт `contracts/openapi.yaml` сохранён. React client в `frontend/` уже
-использует этот API через `/api/v1`; совместимость подтверждена live smoke.
+Backend реализован по прямому запросу пользователя до frontend; контракт
+`contracts/openapi.yaml` сохранён. Фактического frontend client пока нет.
 
 ## Запуск
 
@@ -85,10 +85,9 @@ $env:BACKEND_CORS_ORIGINS = 'http://localhost:5173,http://127.0.0.1:5173'
 Для LLM перед запуском Uvicorn задайте `$env:FP_LLM_PROVIDER='openai'`:
 тогда ключ/модель читаются из корневого `.env`. Режим `'off'`
 не читает файл и не требует ключей. Подробности — [корневой README](../README.md#llm-советник).
-Frontend использует `VITE_USE_MOCKS=false` и
-`VITE_API_BASE_URL=http://localhost:8000` (origin без `/api/v1`). Dev и
-production preview жёстко работают на порту 5173. `npm run smoke:live`
-проверяет CORS, POST 202 и polling реального frontend client.
+Будущий frontend: `VITE_USE_MOCKS=false`,
+`VITE_API_BASE_URL=http://localhost:8000` (origin без `/api/v1`).
+UI build и UI/E2E пока NOT_RUN: frontend отсутствует.
 
 ## Проверки
 
@@ -104,13 +103,13 @@ $env:FP_LLM_PROVIDER = 'off'
 поднимает Uvicorn на свободном localhost-порту и завершает после smoke.
 Проверены mock KPI, один вызов core, strict JSON, seed isolation, lifecycle,
 неполный trace, failed/404/422/500, CORS и paid/zero-cost ROI.
-Последний pytest: 108 passed (69 core/runtime + 39 backend); один warning Starlette
+Последний pytest: 123 passed (84 core/runtime + 39 backend); один warning Starlette
 о будущем переходе TestClient с httpx на httpx2. Полный verifier PASS после
 восстановления исходных LF и проверки 15 SHA256. Judge-команды завершаются;
 отрицательный финансовый результат в local_eval помечается scorer как FAIL.
 Verifier теперь запускает весь pytest с уникальным временным каталогом и
 принудительным provider off; нужны backend/requirements-dev.txt.
-Детали — [handoff](../docs/handoffs/07-integration-to-submission.md).
+Детали — [handoff](../docs/handoffs/06-verification-to-frontend.md).
 
 Справочники реализации: [FastAPI concurrency](https://fastapi.tiangolo.com/async/),
 [Pydantic configuration](https://docs.pydantic.dev/latest/api/config/).
