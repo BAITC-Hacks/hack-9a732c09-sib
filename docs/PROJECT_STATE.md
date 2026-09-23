@@ -1,11 +1,11 @@
 # Текущее состояние
 
-Обновлено: 2026-09-23. Активная роль: INTEGRATION (проверка требований агента).
+Обновлено: 2026-09-23. Активная роль: INTEGRATION (README по пункту 5.4.15).
 Commit: TO_BE_FILLED_AFTER_HUMAN_COMMIT
-Наблюдаемый HEAD: 464b4c2, ветка main. До правок рабочее дерево чистое.
-Codex не выполнял Git-операций записи. После человеческого объединения веток
-активные README/state содержали старое описание baseline; синхронизированы
-с фактическим runtime и завершёнными handoff без переписывания истории.
+Наблюдаемый HEAD: 43241e5, ветка main. До правок рабочее дерево чистое.
+Codex не выполнял Git-операций записи. Корневой README дополнен архитектурой,
+стеком, установкой из нового клона, env-таблицей и сценарием HTTP UI.
+Шаблон .env.example согласован с runtime; реальный .env не менялся.
 
 | Стадия | Статус | Состояние |
 |---|---|---|
@@ -45,23 +45,26 @@ Windows, Python 3.14.7, локальная `.venv`, `PYTHONUTF8=1`.
 
 | Команда / сценарий | Статус | Результат |
 |---|---|---|
-| scripts/verify_core.py до правок | FAIL | 105 passed / 3 failed: тесты ещё ожидали старый order и общий ValueError |
+| scripts/verify_core.py до правок | PASS | 123 passed, 14.79s; все judge-проверки завершены |
 | scripts/verify_core.py после правок | PASS | Все встроенные проверки завершены, exit 0 |
 | Organizer SHA256 | PASS | Все 15 файлов совпадают с manifest; в этой итерации не изменялись |
-| Полный pytest | PASS | 123 passed, 14.72s; один Starlette deprecation warning |
+| Полный pytest | PASS | 123 passed, 15.03s; один Starlette deprecation warning |
 | Реальный Uvicorn / HTTP smoke | PASS | В составе pytest; health/summary/POST/poll/404/422 |
 | local_eval.py | PASS технически / FAIL финансово | 19 пилотов, 1 финал, 3001 контакт, cost=0, net≈−11.63 |
 | local_eval.py --runs 10 | PASS технически | Прибыльны 4/10; медиана≈−4624, min≈−13553, max≈78332 |
 | make_submission.py дважды | PASS | Одинаковый CSV, исходный файл сохранён verifier |
 | git diff --check | PASS | Нет whitespace errors |
+| pip check | PASS | No broken requirements found |
+| README по 5.4.15 | REVIEWED | Все 8 пунктов описаны; команды/env сверены с кодом, локальные ссылки проверены |
+| Повторная установка в чистый clone/venv | NOT_RUN | Проверки выполнены в существующей .venv; изменена документация |
 | Live OpenAI priorities-v2 | NOT_RUN | Проверка выполнялась без платных API-вызовов |
 | Frontend tests/build, UI E2E | NOT_RUN | Node/npm недоступны в PATH; исторический frontend handoff не заменяет текущий E2E |
 
 SHA256 сгенерированного CSV:
 `08f012ca973d18a33ef258addf0312719b27b04f5bc355d3c2f2dce338c63a10`.
-Тесты обновлены под действующий формат LLM и проверяют неполные/невалидные
-ответы, дубликаты ключей, ties, refusal, HTTP ошибки и сетевые таймауты.
-Production-код, стратегия и пороги в этой итерации не менялись.
+Тесты из предыдущей итерации проверяют неполные/невалидные ответы LLM,
+дубликаты ключей, ties, refusal, HTTP ошибки и сетевые таймауты.
+Production-код, стратегия, зависимости и тесты в этой итерации не менялись.
 
 ## Следующие проверки и ограничения
 
@@ -78,5 +81,5 @@ Production-код, стратегия и пороги в этой итераци
 
 Запуск: [README](../README.md), [backend](../backend/README.md),
 [frontend](../frontend/README.md). Последний завершённый handoff:
-[07-requirements-check-to-integration.md](handoffs/07-requirements-check-to-integration.md).
+[08-readme-technical-review.md](handoffs/08-readme-technical-review.md).
 `VERIFICATION_REPORT.md` и прежние handoff — исторические результаты.

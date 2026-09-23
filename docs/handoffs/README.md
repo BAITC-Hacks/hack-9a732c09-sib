@@ -1,8 +1,9 @@
 # Передача контекста
 
 Последний завершённый handoff —
-[`07-requirements-check-to-integration.md`](07-requirements-check-to-integration.md).
-Он подтверждает Python/judge проверки, но не завершённый UI E2E.
+[`08-readme-technical-review.md`](08-readme-technical-review.md).
+Он описывает README по пункту 5.4.15 и Python/judge проверки;
+завершённый UI E2E не подтверждён.
 Каждый следующий этап
 создаёт новый `.md` по `.template`, не редактируя завершённые handoff.
 Последний завершённый файл определяется по номеру и статусу, не по шаблону.
