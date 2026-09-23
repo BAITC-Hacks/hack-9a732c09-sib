@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Campaign",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["target_tariff", "channel"],
+  "properties": {
+    "campaign_name": {"type": "string", "minLength": 1},
+    "target_tariff": {"type": "string", "pattern": "^tariff_[1-9][0-9]*$"},
+    "channel": {"type": "string", "enum": ["push", "sms", "digital_ads", "call"]},
+    "filter_arpu_segment": {"type": ["string", "null"], "enum": ["LOW", "MID", "HIGH", null]},
+    "filter_data_segment": {"type": ["string", "null"], "enum": ["NON_USER", "LITE", "HEAVY", null]},
+    "filter_call_segment": {"type": ["string", "null"], "enum": ["LOW", "MEDIUM", "HIGH", null]},
+    "filter_current_tariff": {"type": ["string", "null"], "pattern": "^tariff_[1-9][0-9]*(;tariff_[1-9][0-9]*)*$"}
+  }
+}

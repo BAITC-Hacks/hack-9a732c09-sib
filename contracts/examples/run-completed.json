@@ -1,0 +1,85 @@
+{
+  "run_id": "00000000-0000-4000-8000-000000000042",
+  "status": "completed",
+  "created_at": "2026-09-23T10:00:00Z",
+  "source": "mock_fixture",
+  "completed_at": "2026-09-23T10:00:01Z",
+  "baseline_total_arpu": 150641084.24626842,
+  "gross_arpu_lift": 122700.0,
+  "total_cost": 5308.0,
+  "net_arpu_gain": 117392.0,
+  "total_arpu_after": 150758476.24626842,
+  "growth_vs_baseline_pct": 0.07792827606583558,
+  "n_pilots": 1,
+  "n_campaigns": 1,
+  "total_contacts": 1327,
+  "unique_customers_targeted": 1227,
+  "coverage_pct": 5.234418326863189,
+  "roi": 23.11605124340618,
+  "risk_score_pct": null,
+  "remaining_budget": 94692.0,
+  "remaining_contacts": 13673,
+  "pilots": [
+    {
+      "pilot": "pilot_1",
+      "target_tariff": "tariff_8",
+      "channel": "sms",
+      "n_customers": 100,
+      "cost": 400,
+      "observed_lift_ratio": 0.05,
+      "observed_lift_total": 5000.0,
+      "remaining_budget": 99600,
+      "remaining_contacts": 14900,
+      "filters": {
+        "filter_arpu_segment": "MID",
+        "filter_data_segment": null,
+        "filter_call_segment": null,
+        "filter_current_tariff": "tariff_4"
+      }
+    }
+  ],
+  "campaigns": [
+    {
+      "campaign_name": "fixture_campaign",
+      "filter_arpu_segment": "MID",
+      "filter_data_segment": null,
+      "filter_call_segment": null,
+      "filter_current_tariff": "tariff_4",
+      "target_tariff": "tariff_8",
+      "channel": "sms"
+    }
+  ],
+  "campaigns_detail": [
+    {
+      "kind": "pilot",
+      "index": 0,
+      "name": "pilot_1",
+      "channel": "sms",
+      "cost": 400,
+      "n_contacts": 100,
+      "gross_lift": 10000.0,
+      "n_negative": 0,
+      "capped_at_campaign_limit": false,
+      "capped_at_reach_budget": false,
+      "capped_at_money_budget": false
+    },
+    {
+      "kind": "final",
+      "index": 0,
+      "name": "fixture_campaign",
+      "channel": "sms",
+      "cost": 4908,
+      "n_contacts": 1227,
+      "gross_lift": 122700.0,
+      "n_negative": 0,
+      "capped_at_campaign_limit": false,
+      "capped_at_reach_budget": false,
+      "capped_at_money_budget": false
+    }
+  ],
+  "warnings": [
+    "Illustrative fixture, not a strategy execution; risk is not calculated."
+  ],
+  "duration_ms": 1000.0,
+  "error": null
+}
