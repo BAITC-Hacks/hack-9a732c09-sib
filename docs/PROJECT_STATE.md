@@ -1,80 +1,102 @@
 # Текущее состояние
 
-Обновлено: 2026-09-23T14:56:53+05:00.
-Текущий этап: ARCHITECT / CORE завершён, передача FRONTEND.
-Активная роль этой сессии: ARCHITECT / CORE.
+Обновлено: 2026-09-23T16:24:27+05:00.
+Текущий этап: FRONTEND завершён, передача BACKEND.
+Активная роль этой сессии: FRONTEND.
 Commit: TO_BE_FILLED_AFTER_HUMAN_COMMIT
 
 | Стадия | Статус | Состояние |
 |---|---|---|
-| Architecture / Core | DONE | Рабочий judge, baseline, контракты, память, 44 tests |
-| Frontend | NOT_STARTED | Только README/role prompt и внешние JSON fixtures |
-| Backend | NOT_STARTED | Только README/role prompt и OpenAPI |
-| Final integration | NOT_STARTED | Только role prompt |
+| Architecture / Core | DONE | Рабочий judge, baseline, OpenAPI v1, 44 Python tests |
+| Frontend | DONE | React/Vite dashboard, fixture + HTTP transports, 18 tests, build |
+| Backend | NOT_STARTED | Только README/role prompt и замороженный OpenAPI |
+| Final integration | NOT_STARTED | Только role prompt; реального API E2E ещё нет |
 
 ## Работает
 
-Корневой Agent импортируется и делает до трёх пилотов через публичный env.
-План зависит от наблюдений; fallback возвращает одну доступную кампанию.
-Core не зависит от demo/сети/ключей. OpenAPI/fixtures валидируются.
-`submission.csv` создан официальным скриптом и воспроизводим побайтно.
-15 organizer-файлов побайтно совпадают с предоставленным пакетом.
+Корневой Agent по-прежнему делает до трёх пилотов через публичный env и
+возвращает финальный план; `submission.csv` воспроизводится побайтно. Frontend
+работает без backend на `contracts/examples/*.json`, показывает аудиторию,
+лимиты, каналы, тарифы, запуск, lifecycle, KPI, пилоты, финальные кампании,
+детализацию и warnings.
 
-## Fixtures и пока отсутствующие компоненты
+Единый `AnalystApiClient` использует взаимозаменяемые `MockTransport` и
+`HttpTransport`. Реализованы обязательный GET после любого POST 202, немедленный
+terminal snapshot, polling 1 секунда, deadline/abort, retry GET того же run,
+структурированные HTTP errors и отдельный stored failed. Mock UI позволяет
+проверить successful, instant, zero-cost/ROI null, negative completed, failed,
+HTTP-error и timeout сценарии. OpenAPI/contract fixtures не менялись.
 
-Summary fixture агрегирован из CSV, run fixture сконструирован; оба имеют
-source=mock_fixture. HTTP API, UI, runtime LLM, БД и E2E пока отсутствуют.
-Метки DONE выше не распространяются на эти слои.
+UI явно помечает `mock_fixture`, не суммирует detail gross, разделяет пилоты и
+финальные кампании, показывает nullable ROI/risk и объясняет UNKNOWN. Есть
+loading/empty/error состояния, keyboard focus, labels, live status, семантические
+таблицы и адаптивная одно-/двухколоночная компоновка. Внешних UI-assets и
+runtime-зависимостей от Python нет.
+
+## Пока отсутствует
+
+FastAPI backend, runtime `source=mock_environment`, интеграция с evaluator через
+HTTP и сквозной browser/API E2E. HTTP transport проверен unit-тестами на
+контрактных ответах, но не вызывал реальный сервер. Fixtures иллюстративны и не
+являются запуском baseline.
 
 ## Последние реальные проверки
 
-Запуск через локальную `.venv` (Python 3.13.15). Короткое `python` изначально
-отсутствовало в PATH; системный launcher найден вне песочницы. Это устранено
-локальным venv, не изменением organizer-кода.
+Проверенное окружение Frontend: Node.js 22.14.0, npm 10.9.2, Windows.
+Python-проверки: Python 3.13.15 в локальной `.venv`; для Unicode-вывода Windows
+использован `PYTHONUTF8=1`.
 
 | Команда | Статус | Результат |
 |---|---|---|
-| python scripts/build_contract_examples.py | PASS | 7 fixtures созданы из публичных данных и явного сценария |
-| python local_eval.py | PASS | 3 пилота, 1 финальная кампания, 1285 контактов, стоимость 0, net ≈4042 |
-| python local_eval.py --runs 10 | PASS | Без падений/invalid; 6/10 прибыльных, знак нестабилен |
-| python make_submission.py (дважды) | PASS | 1 кампания, байты совпали |
-| python scripts/verify_core.py | PASS | 15 SHA256, 44 tests, evaluator и воспроизводимость |
-| python -m pytest | PASS | 44 passed, 3.01 s |
+| npm ci | PASS | 184 packages установлены из lockfile |
+| npm test | PASS | 5 files, 18 tests: client/HTTP/mock/states/UI |
+| npm run build | PASS | TypeScript + Vite; 46 modules, JS 225.79 kB (gzip 70.82 kB) |
+| Vite dev smoke | PASS | `/`, `src/main.tsx`, mock transport и внешний fixture import — HTTP 200 |
+| python local_eval.py | PASS | 3 пилота, 1 финальная кампания, 1285 контактов, cost=0, net≈4042 |
+| python local_eval.py --runs 10 | PASS | 10/10 технически валидны; 6 прибыльных, 4 отрицательных |
+| python make_submission.py | PASS | SHA256 до/после совпал: `d66c27b…f5a77e` |
+| python -m pytest | PASS | 44 passed in 5.56 s |
 | python -m pip check | PASS | No broken requirements found |
-| git diff --check | PASS | Whitespace errors отсутствуют |
-| UI build / backend / E2E | NOT_RUN | Реализации относятся к следующим этапам |
+| python scripts/verify_core.py (текущая working copy) | FAIL | verifier останавливается на `agent_template.py`; все 14 organizer text files имеют CRLF, PDF совпадает |
+| python scripts/verify_core.py (чистый `git archive HEAD`) | PASS | 15 hashes, 44 tests, eval, 10 runs, submission ×2 |
+| Backend API / browser E2E | NOT_RUN | Backend следующего этапа отсутствует |
 
-Первый запуск verifier: FAIL, 38/39 tests; пустые сегменты реального CSV
-не проходили schema summary. Исправлено представлением UNKNOWN; повторный
-полный verifier и отдельный pytest — PASS. Финальный review добавил пять
-тестов защиты существующего submission и LF/CRLF при pre-flight; итоговые 44 tests PASS.
-Полный отчёт:
-[VERIFICATION_REPORT.md](VERIFICATION_REPORT.md).
+Исходный pre-flight через короткий `python` не стартовал: в PATH был только
+недоступный Windows Store alias, а переданная `.venv` отсутствовала. После
+локального восстановления Python post-check выявил pre-existing CRLF во всех 14
+текстовых organizer entries; PDF — единственный исходно совпадающий файл. Git
+status до изменений был clean. LF-нормализация каждого из 14 файлов в памяти
+даёт соответствующий manifest SHA256 (для первого `agent_template.py`:
+`4eb369…b5eb10d`). Organizer-owned файлы не исправлялись и не входят в diff.
+Чистый архив текущего HEAD проходит полный verifier, что подтверждает сохранность
+закоммиченного judge; человеческий review должен восстановить рабочие байты из
+проверенного HEAD/исходного пакета и повторить verifier до commit Frontend.
 
-## Известные ограничения
+Первый `local_eval.py --runs 10` вычислил все seed, но завершился кодом 1 при
+печати `⚠` через cp1251. Повтор с `PYTHONUTF8=1` — PASS; код не менялся.
 
-- Baseline не оптимизирован: min net ≈−41150, max ≈6960, 4/10 seed отрицательны.
-- UNKNOWN в summary не является допустимым campaign filter; core исключает
-  неполные ячейки и ячейки >5000. Fallback требует доступную непустую ячейку.
-- Пилот с некорректным ответом может уже расходовать ресурсы; Backend обязан
-  сверять trace с evaluator и не публиковать неполный completed результат.
-- Положение HackAlem отдельно не предоставлено. Linux/macOS, Node и demo
-  ещё не проверялись. Mock score не прогнозирует hidden score.
+## Известные ограничения и риски
+
+- Реальный API может выявить CORS, timing или DTO-несовместимость; это проверит
+  Backend/Integration, не Frontend fixtures.
+- Mock timeout сокращён до 5 секунд только для демонстрации; обычный клиент и
+  HTTP mode используют контрактные 5 минут.
+- Baseline не оптимизирован: min net ≈−41150, max ≈6960; mock score не
+  прогнозирует hidden score.
+- UNKNOWN остаётся агрегатной меткой, не campaign filter. UI это показывает,
+  но Backend также обязан сохранить всех абонентов в summary.
+- Рабочая копия 14 organizer text files требует человеческого восстановления
+  байтов; не включать их нормализацию в Frontend commit.
 
 ## Замороженные границы и следующий шаг
 
-`agent.py:Agent.act(env) -> list[dict]`,
-`StrategyEngine.run(env, observer=None) -> StrategyRun`, OpenAPI v1 и
-Campaign schema. Детальная семантика счётчиков/ROI/остатков — contracts/README.
-Изменения только по протоколу OWNERSHIP с синхронным обновлением consumers.
+`agent.py:Agent.act(env) -> list[dict]`, `StrategyEngine.run`, Campaign schema и
+OpenAPI v1 не менялись. Frontend contract boundary:
+`frontend/src/api/{types,client,httpTransport,mockTransport}.ts`, конфигурация —
+`frontend/src/config.ts`.
 
-Следующий шаг: человек проверяет итоговый diff/новые файлы, повторяет verifier,
-делает commit/push; участник Frontend делает pull и запускает
-`.codex/prompts/02-frontend.md`. Handoff:
-[01-architecture-to-frontend.md](handoffs/01-architecture-to-frontend.md).
-
-Во время текущей сессии внешний автор создал `ff3b9a7` и merge `cf8970d`
-(начальный HEAD был `6065044`). Изменения проверены: scaffold уже частично
-закоммичен, в README только форматирование; всё сохранено. Codex не выполнял
-Git-операции записи. `cf8970d` не является commit всего завершённого bootstrap:
-оставшиеся файлы и этот handoff ещё требуют человеческого commit.
+Следующий шаг: человек проверяет UI/diff, восстанавливает organizer working-copy
+байты из доверенного источника, повторяет verifier + frontend tests/build,
+делает commit/push. После pull участник Backend запускает
+`.codex/prompts/03-backend.md` и реализует FastAPI по существующему клиенту.
+Handoff: [02-frontend-to-backend.md](handoffs/02-frontend-to-backend.md).

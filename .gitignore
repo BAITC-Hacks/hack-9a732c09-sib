@@ -12,5 +12,9 @@ htmlcov/
 node_modules/
 dist/
 build/
+.npm-cache/
+.tooling/
+.tmp/
+*.tsbuildinfo
 *.egg-info/
 *.log
