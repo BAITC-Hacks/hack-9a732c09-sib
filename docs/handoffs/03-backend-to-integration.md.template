@@ -1,0 +1,32 @@
+# Handoff 03 — BACKEND → INTEGRATION
+
+Статус: TEMPLATE (не завершённый этап).
+Дата/время: TO_BE_FILLED
+Commit: TO_BE_FILLED_AFTER_HUMAN_COMMIT
+
+## Выполненная цель и фактические изменения
+
+TO_BE_FILLED: API, StrategyRunner, DTO mapping, tests, зависимости.
+
+## Решения и замороженные интерфейсы
+
+TO_BE_FILLED: run lifecycle, evaluator mapping, CORS, ошибки, ADR.
+
+## Проверки
+
+| Команда | PASS/FAIL/NOT_RUN | Фактический результат |
+|---|---|---|
+| TO_BE_FILLED | NOT_RUN | Заполнить после запуска |
+
+## Нереализованное и риски
+
+TO_BE_FILLED
+
+## Следующему агенту
+
+Read-order: AGENTS → README → ARCHITECTURE → PROJECT_STATE → COLLABORATION →
+OpenAPI + contracts/README → этот handoff → `.codex/prompts/04-integration.md`.
+Задача: повторить judge и demo проверки, устранить реальные несовместимости,
+подтвердить пользовательский сценарий, README и submission.
+
+Ожидаемый commit message: `feat(backend): implement mock strategy API v1`

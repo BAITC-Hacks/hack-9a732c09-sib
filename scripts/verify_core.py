@@ -28,6 +28,25 @@ def run(args):
             raise RuntimeError("No pilots performed")
 
 
+def verify_submission():
+    path = ROOT / "submission.csv"
+    original = path.read_bytes() if path.exists() else None
+    try:
+        run(["make_submission.py"])
+        first = path.read_bytes()
+        run(["make_submission.py"])
+        if first != path.read_bytes():
+            raise RuntimeError("Submission is not byte-for-byte reproducible")
+        # The official pandas exporter uses native newlines; Git may store LF.
+        if original is not None and original.replace(b"\r\n", b"\n") != first.replace(b"\r\n", b"\n"):
+            raise RuntimeError("Existing submission differs from generated output; original preserved. Regenerate explicitly after review.")
+        print("PASS submission SHA256: " + hashlib.sha256(first).hexdigest())
+    finally:
+        # Pre-flight must not destroy an existing human-edited artifact, even on failure.
+        if original is not None:
+            path.write_bytes(original)
+
+
 def main():
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
@@ -38,15 +57,10 @@ def main():
         if actual != expected:
             raise RuntimeError(f"Organizer file changed: {relative}")
     print(f"PASS organizer integrity: {len(manifest['sha256'])} files", flush=True)
-    run(["-m", "pytest", "-q", "tests/test_agent_contract.py", "tests/test_core_models.py", "tests/test_contract_fixtures.py"])
+    run(["-m", "pytest", "-q", "tests/test_agent_contract.py", "tests/test_core_models.py", "tests/test_contract_fixtures.py", "tests/test_verification.py"])
     run(["local_eval.py"])
     run(["local_eval.py", "--runs", "10"])
-    run(["make_submission.py"])
-    first = (ROOT / "submission.csv").read_bytes()
-    run(["make_submission.py"])
-    if first != (ROOT / "submission.csv").read_bytes():
-        raise RuntimeError("Submission is not byte-for-byte reproducible")
-    print("PASS submission SHA256: " + hashlib.sha256(first).hexdigest())
+    verify_submission()
     print("PASS all core/contract/judge checks")
     return 0
 

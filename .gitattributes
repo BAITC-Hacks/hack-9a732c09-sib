@@ -1,0 +1,21 @@
+# Preserve the organizer package byte-for-byte across Windows and Unix clones.
+/PARTICIPANT_GUIDE.md -text
+/PARTICIPANT_GUIDE.pdf -text
+/agent_template.py -text
+/environment.py -text
+/mock_environment.py -text
+/scoring_core.py -text
+/local_eval.py -text
+/make_submission.py -text
+/customer_profile.csv -text
+/tariff_dictionary.csv -text
+/feature_dictionary.csv -text
+/data/** -text
+# Keep generated team artifacts stable on every platform.
+/submission.csv text eol=lf
+/contracts/** text eol=lf
+/false_positive/** text eol=lf
+/scripts/** text eol=lf
+/tests/** text eol=lf
+/requirements*.txt text eol=lf
+/requirements*.lock text eol=lf

@@ -1,0 +1,32 @@
+# Handoff 02 — FRONTEND → BACKEND
+
+Статус: TEMPLATE (не завершённый этап).
+Дата/время: TO_BE_FILLED
+Commit: TO_BE_FILLED_AFTER_HUMAN_COMMIT
+
+## Выполненная цель и фактические изменения
+
+TO_BE_FILLED: созданные файлы, UI, client, mock/HTTP transports, зависимости.
+
+## Решения и замороженные интерфейсы
+
+TO_BE_FILLED: actual client paths/types, env variables, API changes and ADR.
+
+## Проверки
+
+| Команда | PASS/FAIL/NOT_RUN | Фактический результат |
+|---|---|---|
+| TO_BE_FILLED | NOT_RUN | Заполнить после запуска |
+
+## Нереализованное и риски
+
+TO_BE_FILLED
+
+## Следующему агенту
+
+Read-order: AGENTS → README → ARCHITECTURE → PROJECT_STATE → COLLABORATION →
+OpenAPI + contracts/README → этот handoff → `.codex/prompts/03-backend.md` →
+фактический frontend API client и fixtures. Задача: реализовать FastAPI по
+существующему клиенту и контракту, общий core, официальный mock evaluator.
+
+Ожидаемый commit message: `feat(frontend): add analyst dashboard with mock transport`

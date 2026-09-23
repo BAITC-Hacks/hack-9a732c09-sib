@@ -1,5 +1,5 @@
 -r requirements.txt
-pytest>=8,<10
-jsonschema>=4,<5
-PyYAML>=6,<7
-openapi-spec-validator>=0.7,<0.8
+pytest==9.1.1
+jsonschema==4.26.0
+PyYAML==6.0.3
+openapi-spec-validator==0.7.2
