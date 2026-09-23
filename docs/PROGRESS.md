@@ -16,3 +16,21 @@ CSV-сегменты; исправлено на UNKNOWN, успешные про
 Внешние человеческие commits появились в ходе этой же сессии: ff3b9a7,
 cf8970d. Агент историю не создавал/не переписывал; новые финальные документы
 остаются для последующего review и commit.
+
+| Время | Участник | Роль | Commit/placeholder | Промежуточный артефакт | Команда проверки | Результат |
+|---|---|---|---|---|---|---|
+| 2026-09-23T15:20:01+05:00 | Участник + Codex | BACKEND | TO_BE_FILLED_AFTER_HUMAN_COMMIT | FastAPI v1, DTO, runner, память/очередь, CORS, smoke, 38 backend tests, документация | python -m pytest -q; local_eval.py; local_eval.py --runs 10; make_submission.py; pip check; git diff --check | PASS: 82 tests, real Uvicorn HTTP smoke, 6/10 seed прибыльны. Verifier FAIL: существующие CRLF в 14 organizer-файлах; UI/E2E NOT_RUN, frontend отсутствует |
+
+Backend начат по прямому запросу пользователя до frontend; OpenAPI v1 и
+core не изменены. Исходный HEAD d0c33eb/main, чужое изменение `.gitignore`
+сохранено. Создана локальная `.venv` Python 3.14.7; backend зависимости
+отделены от judge. Короткий python alias не работает, используется venv.
+Установка зависимостей из песочницы была недоступна из-за сети; разрешённая
+установка завершилась успешно.
+
+До/после verifier останавливается на agent_template.py: все HEAD blobs
+совпадают с manifest, 14 дисковых текстовых файлов отличаются только LF/CRLF.
+Organizer-файлы не правились. Исходные 44 tests PASS. Первый backend test
+неверно считал seed 0 убыточным; исправлен на seed 1. Первый CLI --runs 10
+падал на печати ⚠ в CP1251; повтор с PYTHONUTF8=1 PASS. Последний общий
+pytest: 82 passed, один warning Starlette про httpx TestClient.

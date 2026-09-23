@@ -24,13 +24,24 @@ Beeline Tariff Marketing Campaigns Case. Все 15 файлов импортир
 | PyYAML | 6.0.3 | Чтение OpenAPI YAML | MIT |
 | openapi-spec-validator | 0.7.2 | Валидация OpenAPI 3.1 | Apache-2.0 |
 
-Python 3.13.15 — проверенный интерпретатор; стандартная библиотека используется
-в core. Транзитивные distributions с фактическими версиями перечислены в
+Python 3.13.15 проверен на архитектурном этапе, Python 3.14.7 — на backend.
+Стандартная библиотека используется в core. Транзитивные distributions перечислены в
 `requirements-dev.lock`; их собственные copyright/license notices остаются
 в установленных пакетах. Lock не означает, что все dev-пакеты нужны judge.
 
-React/Vite/TypeScript/FastAPI пока не установлены и не являются использованными
-компонентами проекта. Их notices добавляют соответствующие будущие этапы.
+Прямые backend-зависимости (прочитано из установленных METADATA):
+
+| Компонент | Версия | Назначение | Метаданные лицензии |
+|---|---|---|---|
+| FastAPI | 0.141.1 | HTTP API | MIT |
+| Pydantic | 2.13.5 | Backend DTO и validation | MIT |
+| Uvicorn | 0.53.0 | ASGI server | BSD-3-Clause |
+| HTTPX | 0.28.1 | Backend TestClient | BSD-3-Clause |
+
+FastAPI использует Starlette 1.7.0 (BSD-3-Clause). Полный freeze backend
+dev-окружения — `backend/requirements-dev.lock`. Backend зависимости не
+добавлены в judge requirements; notices остаются в distributions.
+React/Vite/TypeScript пока не установлены; их notices добавит frontend.
 Внешних UI-шаблонов, изображений или runtime LLM SDK сейчас нет.
 
 ## AI-assisted development

@@ -1,7 +1,8 @@
 # API v1 — зафиксированная семантика
 
 `openapi.yaml` (OpenAPI 3.1) — источник истины. `campaign.schema.json` содержит
-ту же Campaign-схему для проверки judge/CSV. Реального HTTP-сервера ещё нет.
+ту же Campaign-схему для проверки judge/CSV. HTTP-сервер реализован в
+`backend/`; запуск и проверки описаны в `backend/README.md`. Схема v1 неизменна.
 
 - Origin по умолчанию `http://localhost:8000`, пути уже включают `/api/v1`.
   `VITE_API_BASE_URL` задаёт origin без `/api/v1`.
